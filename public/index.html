@@ -201,10 +201,12 @@ function dirPill(dir, text) {
   return `<div class="pill ${dir > 0 ? 'p-up' : dir < 0 ? 'p-down' : 'p-flat'}"><span class="pill-icon">${icon}</span>${text}</div>`;
 }
 
-function accLine(bt, unit) {
-  if (!bt || !bt.n) return `<div class="muted">ความแม่นย้อนหลัง: ยังมีข้อมูลไม่พอ</div>`;
-  return `<div class="acc"><b>ทดสอบย้อนหลัง:</b> ${bt.n} ครั้งที่แบบจำลองบอกให้ปรับ ≥ ${unit} ราคาไทยปรับไปทางเดียวกันภายใน 2 วัน
-    <b>${fmt(bt.hitRate * 100, 0)}%</b>${bt.sizeRatio ? ` · ขนาดที่ปรับจริงประมาณ ${fmt(bt.sizeRatio * 100, 0)}% ของที่ประมาณ` : ''}</div>`;
+function oilAcc(bt) {
+  if (!bt || bt.changes < 3) return `<div class="muted">ความแม่นย้อนหลัง: ยังมีข้อมูลไม่พอ</div>`;
+  return `<div class="acc"><b>ทดสอบย้อนหลัง ${bt.days} วัน (ตั้งแต่ ${thDate(bt.from)}):</b> ราคาไทยปรับ ${bt.changes} ครั้ง
+    (ขึ้น ${bt.ups} ลง ${bt.downs} เฉลี่ยครั้งละ ${fmt(bt.avgStep)} บาท)
+    ${bt.n ? `· ครั้งที่มีแรงกดดันชัดเจน ทิศทางตรงกัน <b>${fmt(bt.hitRate * 100, 0)}%</b> (${bt.hit}/${bt.n})` : ''}
+    ${bt.strong ? `· เมื่อแรงกดดันเกิน 1 บาท ราคาปรับตามภายใน 2 วัน <b>${fmt(bt.followRate * 100, 0)}%</b> ของวัน` : ''}</div>`;
 }
 
 function signalOilCard(s) {
@@ -212,23 +214,25 @@ function signalOilCard(s) {
   const head = s.announced != null
     ? dirPill(Math.sign(s.announced), `ประกาศแล้ว: พรุ่งนี้ ${s.announced > 0 ? 'ขึ้น' : 'ลง'} ${fmt(Math.abs(s.announced))} บาท/ลิตร`)
     : s.direction === 0
-      ? dirPill(0, `ยังไม่มีแรงกดดันให้ปรับ (${sgn(s.estimate)} บาท/ลิตร)`)
-      : dirPill(s.direction, `มีแนวโน้ม${s.direction > 0 ? 'ขึ้น' : 'ลง'} ประมาณ ${fmt(Math.abs(s.estimate))} บาท/ลิตร`);
+      ? dirPill(0, `แรงกดดันยังน้อย (${sgn(s.estimate)} บาท/ลิตร)`)
+      : dirPill(s.direction, `ถ้าปรับ น่าจะเป็นขา${s.direction > 0 ? 'ขึ้น' : 'ลง'} · แรงกดดันสะสม ${sgn(s.estimate)} บาท/ลิตร`);
   const m = s.model, st = s.structure;
+  const fundTxt = (f) => f == null ? '–' : f < 0 ? `อุดหนุน ${fmt(-f)}` : `เก็บเข้า ${fmt(f)}`;
   const why = s.method === 'eppo' ? `<table style="margin-top:10px">
-      <tr><th>เหตุผลของสัญญาณ</th><th>บาท/ลิตร</th></tr>
-      <tr><td>ค่าการตลาดตอนนี้ (สนพ. ${thDate(m.eppoDate)}${Math.abs(m.mmNow - st.mm) > 0.001 ? ' ปรับตามราคาหน้าปั๊มล่าสุด' : ''})</td><td>${fmt(m.mmNow)}</td></tr>
-      <tr><td>ราคาโลกหลังวันที่ของไฟล์ สนพ. ทำให้ต้นทุนเปลี่ยน</td><td>${sgn(m.dExr)}</td></tr>
-      <tr><td>ค่าการตลาดที่คาดว่าจะเหลือถ้ายังไม่ปรับราคา</td><td>${fmt(m.mmProjected)}</td></tr>
-      <tr><td>ค่าการตลาดระดับปกติ (ค่ากลาง ${m.normDays} วัน)</td><td>${fmt(m.norm)}</td></tr>
-      <tr><td><b>ราคาไทยน่าจะปรับ (รวม VAT)</b></td><td><b>${sgn(s.estimate)}</b></td></tr></table>`
+      <tr><th>ที่มาของแรงกดดัน</th><th>บาท/ลิตร</th></tr>
+      ${m.base.exr != null ? `<tr><td>ราคาเนื้อน้ำมันตอนไทยปรับครั้งล่าสุด (${thDate(m.base.date)})</td><td>${fmt(m.base.exr)}</td></tr>
+      <tr><td>ราคาเนื้อน้ำมันล่าสุด (สนพ. ${thDate(m.eppoDate)})</td><td>${fmt(m.exrNow)}</td></tr>` :
+      `<tr><td>ไทยปรับราคาหลังวันที่ของไฟล์ สนพ. (${thDate(m.base.date)}) นับจากราคาโลกตั้งแต่วันนั้น</td><td></td></tr>`}
+      <tr><td>ตลาดโลกขยับหลังวันที่ของไฟล์ สนพ. (ประมาณจากนิวยอร์ก)</td><td>${sgn(m.dExr)}</td></tr>
+      <tr><td><b>แรงกดดันสะสม (รวม VAT)</b></td><td><b>${sgn(s.estimate)}</b></td></tr>
+      <tr><td>กองทุนน้ำมันตอนนี้${m.fundAtBase != null ? ` (ตอนปรับครั้งล่าสุด ${fundTxt(m.fundAtBase)})` : ''}</td><td>${fundTxt(m.fund)}</td></tr></table>`
     : `<div class="explain">ยังไม่มีข้อมูล สนพ. จึงประมาณจากการเปลี่ยนแปลงของราคาโลกตั้งแต่ไทยปรับครั้งล่าสุด</div>`;
   const struct = st ? `<div class="explain" style="margin-top:12px"><b>ราคา ${fmt(st.retail)} บาท มาจาก</b>
       ราคาเนื้อน้ำมัน ${fmt(st.exr)} · ภาษี ${fmt(st.tax)} · กองทุนน้ำมัน ${sgn(st.fund)} · ค่าการตลาด ${fmt(st.mm)} · VAT และอื่น ๆ ${fmt(st.other)}</div>` : '';
   return `<section class="card span-6">
-    <div class="card-head"><h2>${esc(s.title)}</h2><span class="muted">${s.method === 'eppo' ? 'แบบจำลองค่าการตลาด (สนพ.)' : 'เทียบราคาโลก'}</span></div>
+    <div class="card-head"><h2>${esc(s.title)}</h2><span class="muted">${s.method === 'eppo' ? 'โครงสร้างราคา สนพ.' : 'เทียบราคาโลก'}</span></div>
     ${head}
-    ${accLine(s.backtest, '0.30 บาท')}
+    ${oilAcc(s.backtest)}
     <div class="stats" style="margin-top:12px">
       <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย: ${esc(s.thaiName || '–')}</div>
         <div class="value">${fmt(s.thaiNow)}</div><div class="note">บาท/ลิตร${s.lastChange ? ` · ปรับล่าสุด ${thDate(s.lastChange.date)} (${sgn(s.lastChange.delta)})` : ''}</div></div>
@@ -236,9 +240,9 @@ function signalOilCard(s) {
         <div class="value">${fmt(s.worldNow)}</div><div class="note">บาท/ลิตร ก่อนภาษี · 1 วัน ${sgn(s.change1d)} · 7 วัน ${sgn(s.change7d)}</div></div>
     </div>
     ${why}${struct}
-    <div class="explain" style="margin-top:12px"><b>การเปลี่ยนแปลงสะสม 90 วัน (บาท/ลิตร)</b> ถ้าเส้นโลกห่างจากเส้นไทยมาก แปลว่าไทยยังปรับไม่ทัน</div>
+    <div class="explain" style="margin-top:12px"><b>เปลี่ยนแปลงสะสม 90 วัน (บาท/ลิตร)</b> เส้นส้มคือ${esc(s.chart.costLabel)}ที่เปลี่ยนไป (รวม VAT) เส้นฟ้าคือราคาขายปลีกไทย ช่องว่างระหว่างสองเส้นคือส่วนที่กองทุนน้ำมันรับไว้</div>
     <div class="chart" id="oilChart-${s.key}"></div>
-    ${s.chart.mm.length > 1 ? `<div class="explain" style="margin-top:8px"><b>ค่าการตลาด (บาท/ลิตร)</b> สูงกว่าปกติ = มีช่องให้ลดราคา ต่ำกว่าปกติ = มีแรงกดดันให้ขึ้นราคา</div><div class="chart" id="mmChart-${s.key}"></div>` : ''}
+    ${s.chart.fund?.length > 1 ? `<div class="explain" style="margin-top:8px"><b>เงินกองทุนน้ำมัน (บาท/ลิตร)</b> ติดลบ = รัฐอุดหนุนราคาอยู่ ยิ่งติดลบมาก ยิ่งมีแรงกดดันให้ขึ้นราคาเพื่อลดภาระกองทุน</div><div class="chart" id="fundChart-${s.key}"></div>` : ''}
   </section>`;
 }
 
@@ -408,22 +412,23 @@ async function load() {
       `<div class="section-title span-12"><h2>ราคาปัจจุบัน ไทยเทียบโลก</h2></div>` +
       goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) +
       `<div class="card span-12 explain" style="margin:0">
-        <b>ข้อควรรู้เรื่องการประมาณ</b> สัญญาณน้ำมันใช้โครงสร้างราคารายวันของ สนพ. (ราคา ณ โรงกลั่นอิงตลาดสิงคโปร์) ร่วมกับหลักว่าผู้ค้ามักปรับราคาให้ค่าการตลาดกลับสู่ระดับปกติ
-        ส่วนการขยับของราคาโลกหลังวันที่ของไฟล์ สนพ. ประมาณจากตลาดนิวยอร์ก (RBOB, ULSD) ซึ่งเคลื่อนไหวทิศทางเดียวกับสิงคโปร์แต่ไม่ตรงทุกสตางค์
-        ราคาดีเซลอาจถูกดูแลโดยกองทุนน้ำมันเชื้อเพลิง จึงอาจไม่ปรับตามแบบจำลอง ตัวเลข "ทดสอบย้อนหลัง" ในแต่ละการ์ดบอกว่าเชื่อได้แค่ไหน
+        <b>ข้อควรรู้เรื่องการประมาณ</b> ข้อมูล สนพ. แสดงว่าค่าการตลาดของไทยแทบคงที่ เมื่อราคาเนื้อน้ำมัน (อิงตลาดสิงคโปร์) ขยับ กองทุนน้ำมันจะรับส่วนต่างไว้ก่อน
+        แล้วราคาขายปลีกจะถูกปรับเป็นขั้นเมื่อแรงกดดันสะสมพอ เว็บนี้จึงบอก "ทิศทางที่น่าจะปรับ" ได้ดีกว่า "วันที่จะปรับ"
+        การขยับของตลาดโลกหลังวันที่ของไฟล์ สนพ. ประมาณจากตลาดนิวยอร์ก (RBOB, ULSD) ดีเซลขึ้นกับนโยบายกองทุนน้ำมันมาก จึงคาดการณ์ได้ยากกว่า
+        ตัวเลข "ทดสอบย้อนหลัง" ในแต่ละการ์ดบอกว่าเชื่อได้แค่ไหน
       </div>`;
 
     for (const s of d.oil.signals) {
       if (!s.ok) continue;
-      const series = [{ name: 'ราคาโลก (รวม VAT)', short: 'โลก', color: '--series-2', points: s.chart.world }];
-      if (s.chart.thai.length) series.unshift({ name: `ไทย: ${s.thaiName}`, short: 'ไทย', color: '--series-1', points: s.chart.thai });
-      lineChart($(`#oilChart-${s.key}`), series, { height: 190, zero: true, xLabel: thDate, format: (v) => sgn(v), label: `${s.title} ไทยเทียบโลก` });
-      if (s.chart.mm.length > 1 && $(`#mmChart-${s.key}`)) {
-        const mmS = [{ name: 'ค่าการตลาด', short: 'ค่าการตลาด', color: '--series-1', points: s.chart.mm }];
-        if (s.model?.norm != null) mmS.push({ name: `ระดับปกติ (${fmt(s.model.norm)})`, short: 'ปกติ', color: '--series-3', points: s.chart.mm.map((p) => ({ date: p.date, value: s.model.norm })) });
-        lineChart($(`#mmChart-${s.key}`), mmS, { height: 150, xLabel: thDate, format: (v) => fmt(v), label: `ค่าการตลาด ${s.title}` });
+      const series = [{ name: `${s.chart.costLabel} (รวม VAT)`, short: 'ต้นทุน', color: '--series-2', points: s.chart.world }];
+      if (s.chart.thai.length) series.unshift({ name: `ไทย: ${s.thaiName}`, short: 'ไทย', color: '--series-1', step: true, points: s.chart.thai });
+      lineChart($(`#oilChart-${s.key}`), series, { height: 190, zero: true, xLabel: thDate, format: (v) => sgn(v), label: `${s.title} ไทยเทียบต้นทุน` });
+      if (s.chart.fund?.length > 1 && $(`#fundChart-${s.key}`)) {
+        lineChart($(`#fundChart-${s.key}`), [{ name: 'กองทุนน้ำมัน', color: '--series-1', step: true, points: s.chart.fund }],
+          { height: 140, zero: true, xLabel: thDate, format: (v) => sgn(v), label: `กองทุนน้ำมัน ${s.title}` });
       }
     }
+
     if (d.gold.signal?.ok) {
       const c = d.gold.signal.chart;
       const iso = (p) => ({ date: new Date(p.t).toISOString(), value: p.v });
