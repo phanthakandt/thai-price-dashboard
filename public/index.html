@@ -220,12 +220,19 @@ const thMonth = (d) => new Date(d).toLocaleDateString('th-TH', { month: 'short',
 // ---------- สัญญาณทิศทาง ----------
 const sgn = (v, d = 2) => v == null ? '–' : (v > 0 ? '+' : v < 0 ? '−' : '') + fmt(Math.abs(v), d);
 // ตัวเลขมีเครื่องหมายแบบมีสี (ขึ้น = เขียว, ลง = แดง) ใช้ใน HTML เท่านั้น ไม่ใช้ในกราฟ
-const sgnC = (v, d = 2) => v == null ? '–' : `<span class="${v > 0.0001 ? 'up' : v < -0.0001 ? 'down' : ''}">${sgn(v, d)}</span>`;
+// cost = true สำหรับราคาที่คนจ่าย (น้ำมัน): ขึ้น = แดง, ลง = เขียว
+const sgnC = (v, d = 2, cost = false) => {
+  if (v == null) return '–';
+  const dir = v > 0.0001 ? 1 : v < -0.0001 ? -1 : 0;
+  const cls = dir === 0 ? '' : (dir > 0) !== cost ? 'up' : 'down';
+  return `<span class="${cls}">${sgn(v, d)}</span>`;
+};
 const thDate = (d) => new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
 const thTime = (t) => new Date(t).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-function dirPill(dir, text) {
+function dirPill(dir, text, cost = false) {
   const icon = dir > 0 ? '▲' : dir < 0 ? '▼' : '●';
-  return `<div class="pill ${dir > 0 ? 'p-up' : dir < 0 ? 'p-down' : 'p-flat'}"><span class="pill-icon">${icon}</span>${text}</div>`;
+  const cls = dir === 0 ? 'p-flat' : (dir > 0) !== cost ? 'p-up' : 'p-down';
+  return `<div class="pill ${cls}"><span class="pill-icon">${icon}</span>${text}</div>`;
 }
 
 function oilAcc(bt) {
@@ -239,10 +246,10 @@ function oilAcc(bt) {
 function signalOilCard(s) {
   if (!s.ok) return `<section class="card span-6"><h2>${esc(s.title)}</h2><div class="err">ดึงข้อมูลไม่สำเร็จ: ${esc(s.error)}</div></section>`;
   const head = s.announced != null
-    ? dirPill(Math.sign(s.announced), `ประกาศแล้ว: พรุ่งนี้ ${s.announced > 0 ? 'ขึ้น' : 'ลง'} ${fmt(Math.abs(s.announced))} บาท/ลิตร`)
+    ? dirPill(Math.sign(s.announced), `ประกาศแล้ว: พรุ่งนี้ ${s.announced > 0 ? 'ขึ้น' : 'ลง'} ${fmt(Math.abs(s.announced))} บาท/ลิตร`, true)
     : s.direction === 0
-      ? dirPill(0, `แรงกดดันยังน้อย (${sgnC(s.estimate)} บาท/ลิตร)`)
-      : dirPill(s.direction, `ถ้าปรับ น่าจะเป็นขา${s.direction > 0 ? 'ขึ้น' : 'ลง'} · แรงกดดัน ${sgnC(s.estimate)} บาท/ลิตร`);
+      ? dirPill(0, `แรงกดดันยังน้อย (${sgnC(s.estimate, 2, true)} บาท/ลิตร)`, true)
+      : dirPill(s.direction, `ถ้าปรับ น่าจะเป็นขา${s.direction > 0 ? 'ขึ้น' : 'ลง'} · แรงกดดัน ${sgnC(s.estimate, 2, true)} บาท/ลิตร`, true);
   const m = s.model, st = s.structure;
   const fundTxt = (f) => f == null ? '–' : f < 0 ? `อุดหนุน ${fmt(-f)}` : `เก็บเข้า ${fmt(f)}`;
   const why = s.method === 'eppo' ? `<table style="margin-top:10px">
@@ -250,22 +257,22 @@ function signalOilCard(s) {
       ${m.base.exr != null ? `<tr><td>ราคาเนื้อน้ำมันตอนไทยปรับครั้งล่าสุด (${thDate(m.base.date)})</td><td>${fmt(m.base.exr)}</td></tr>
       <tr><td>ราคาเนื้อน้ำมันล่าสุด (สนพ. ${thDate(m.eppoDate)})</td><td>${fmt(m.exrNow)}</td></tr>` :
       `<tr><td>ไทยปรับราคาหลังวันที่ของไฟล์ สนพ. (${thDate(m.base.date)}) นับจากราคาโลกตั้งแต่วันนั้น</td><td></td></tr>`}
-      <tr><td>ตลาดโลกขยับหลังวันที่ของไฟล์ สนพ. (ประมาณจากนิวยอร์ก)</td><td>${sgnC(m.dExr)}</td></tr>
-      <tr><td>① ต้นทุนเปลี่ยนตั้งแต่ปรับราคาครั้งล่าสุด (รวม VAT)</td><td>${sgnC(m.cost)}</td></tr>
-      <tr><td>② ภาระกองทุนน้ำมันตอนนี้ (${fundTxt(m.fundEst)} บาท/ลิตร, รวม VAT)</td><td>${sgnC(m.fundLoad)}</td></tr>
-      <tr><td><b>แรงกดดันรวม ① + ②</b></td><td><b>${sgnC(s.estimate)}</b></td></tr></table>`
+      <tr><td>ตลาดโลกขยับหลังวันที่ของไฟล์ สนพ. (ประมาณจากนิวยอร์ก)</td><td>${sgnC(m.dExr, 2, true)}</td></tr>
+      <tr><td>① ต้นทุนเปลี่ยนตั้งแต่ปรับราคาครั้งล่าสุด (รวม VAT)</td><td>${sgnC(m.cost, 2, true)}</td></tr>
+      <tr><td>② ภาระกองทุนน้ำมันตอนนี้ (${fundTxt(m.fundEst)} บาท/ลิตร, รวม VAT)</td><td>${sgnC(m.fundLoad, 2, true)}</td></tr>
+      <tr><td><b>แรงกดดันรวม ① + ②</b></td><td><b>${sgnC(s.estimate, 2, true)}</b></td></tr></table>`
     : `<div class="explain">ยังไม่มีข้อมูล สนพ. จึงประมาณจากการเปลี่ยนแปลงของราคาโลกตั้งแต่ไทยปรับครั้งล่าสุด</div>`;
   const struct = st ? `<div class="explain" style="margin-top:12px"><b>ราคา ${fmt(st.retail)} บาท มาจาก</b>
-      ราคาเนื้อน้ำมัน ${fmt(st.exr)} · ภาษี ${fmt(st.tax)} · กองทุนน้ำมัน ${sgnC(st.fund)} · ค่าการตลาด ${fmt(st.mm)} · VAT และอื่น ๆ ${fmt(st.other)}</div>` : '';
+      ราคาเนื้อน้ำมัน ${fmt(st.exr)} · ภาษี ${fmt(st.tax)} · กองทุนน้ำมัน ${sgnC(st.fund, 2, true)} · ค่าการตลาด ${fmt(st.mm)} · VAT และอื่น ๆ ${fmt(st.other)}</div>` : '';
   return `<section class="card span-6">
     <div class="card-head"><h2>${esc(s.title)}</h2><span class="muted">${s.method === 'eppo' ? 'โครงสร้างราคา สนพ.' : 'เทียบราคาโลก'}</span></div>
     ${head}
     ${oilAcc(s.backtest)}
     <div class="stats" style="margin-top:12px">
       <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย: ${esc(s.thaiName || '–')}</div>
-        <div class="value">${fmt(s.thaiNow)}</div><div class="note">บาท/ลิตร${s.lastChange ? ` · ปรับล่าสุด ${thDate(s.lastChange.date)} (${sgnC(s.lastChange.delta)})` : ''}</div></div>
+        <div class="value">${fmt(s.thaiNow)}</div><div class="note">บาท/ลิตร${s.lastChange ? ` · ปรับล่าสุด ${thDate(s.lastChange.date)} (${sgnC(s.lastChange.delta, 2, true)})` : ''}</div></div>
       <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>${esc(s.proxyName)}</div>
-        <div class="value">${fmt(s.worldNow)}</div><div class="note">บาท/ลิตร ก่อนภาษี · 1 วัน ${sgnC(s.change1d)} · 7 วัน ${sgnC(s.change7d)}</div></div>
+        <div class="value">${fmt(s.worldNow)}</div><div class="note">บาท/ลิตร ก่อนภาษี · 1 วัน ${sgnC(s.change1d, 2, true)} · 7 วัน ${sgnC(s.change7d, 2, true)}</div></div>
     </div>
     ${why}${struct}
     <div class="explain" style="margin-top:12px"><b>เปลี่ยนแปลงสะสม 90 วัน (บาท/ลิตร)</b> เส้นส้มคือ${esc(s.chart.costLabel)}ที่เปลี่ยนไป (รวม VAT) เส้นฟ้าคือราคาขายปลีกไทย ช่องว่างระหว่างสองเส้นคือส่วนที่กองทุนน้ำมันรับไว้</div>
@@ -495,7 +502,7 @@ function summaryCard(items) {
   const icon = (it) => it.dir > 0 ? '▲' : it.dir < 0 ? '▼' : '●';
   return `<section class="card span-12 summary">
     <div class="card-head"><h2>สรุปวันนี้</h2><span class="muted">สร้างอัตโนมัติจากตัวเลขในหน้านี้ · ใช้ดูภาพรวม ไม่ใช่คำแนะนำการลงทุน</span></div>
-    <ul>${items.map((it) => `<li><span class="tag">${esc(it.tag)}</span><span class="si ${it.dir > 0 ? 'up' : it.dir < 0 ? 'down' : ''}">${icon(it)}</span>${esc(it.text)}</li>`).join('')}</ul>
+    <ul>${items.map((it) => `<li><span class="tag">${esc(it.tag)}</span><span class="si ${it.dir === 0 ? '' : (it.dir > 0) !== !!it.cost ? 'up' : 'down'}">${icon(it)}</span>${esc(it.text)}</li>`).join('')}</ul>
   </section>`;
 }
 
