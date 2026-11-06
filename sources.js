@@ -255,3 +255,46 @@ export async function fetchNews(query) {
     return { title, link: tag(it, 'link'), source, time: Date.parse(tag(it, 'pubDate')) || null };
   }).filter((n) => n.title && n.link);
 }
+
+// ---------- 9) อัตราการว่างงาน ----------
+export const UNEMP_COUNTRIES = { THA: 'ไทย', WLD: 'ค่าเฉลี่ยโลก', MYS: 'มาเลเซีย', VNM: 'เวียดนาม', PHL: 'ฟิลิปปินส์', USA: 'สหรัฐ', CHN: 'จีน', JPN: 'ญี่ปุ่น' };
+
+// รายปี: World Bank (ประมาณการตามมาตรฐาน ILO) มีค่าเฉลี่ยโลกให้เทียบ
+export async function fetchUnemploymentAnnual() {
+  const codes = Object.keys(UNEMP_COUNTRIES).join(';');
+  const j = await getJSON(`https://api.worldbank.org/v2/country/${codes}/indicator/SL.UEM.TOTL.ZS?format=json&date=2010:2030&per_page=500`);
+  const out = {};
+  for (const r of j[1] || []) {
+    if (r.value == null) continue;
+    (out[r.countryiso3code] ??= []).push({ date: r.date, value: r.value });
+  }
+  for (const k in out) out[k].sort((a, b) => a.date.localeCompare(b.date));
+  if (!out.THA?.length) throw new Error('ไม่พบข้อมูลการว่างงานของไทยจาก World Bank');
+  return { series: out, source: 'World Bank / ILO (รายปี)' };
+}
+
+// รายไตรมาส: ILOSTAT (จากการสำรวจภาวะการทำงานของแต่ละประเทศ ไม่ปรับฤดูกาล)
+export async function fetchUnemploymentQuarterly() {
+  const areas = ['THA', 'MYS', 'VNM', 'PHL', 'USA', 'JPN'].join('+');
+  const from = new Date().getUTCFullYear() - 4;
+  const url = `https://rplumber.ilo.org/data/indicator/?id=UNE_DEAP_SEX_AGE_RT_Q&ref_area=${areas}&sex=SEX_T&classif1=AGE_YTHADULT_YGE15&timefrom=${from}&format=.csv`;
+  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status} จาก rplumber.ilo.org`);
+  const lines = (await res.text()).trim().split('\n');
+  const head = lines.shift().split(',').map((h) => h.replace(/"/g, ''));
+  const ix = (k) => head.indexOf(k);
+  const out = {};
+  for (const l of lines) {
+    const c = l.split(',').map((x) => x.replace(/"/g, ''));
+    const v = toNum(c[ix('obs_value')]);
+    if (v == null) continue;
+    (out[c[ix('ref_area')]] ??= []).push({ date: c[ix('time')], value: v });
+  }
+  for (const k in out) {
+    // ถ้าประเทศเดียวกันมีหลายแหล่งข้อมูลในไตรมาสเดียวกัน ใช้ค่าแรก
+    const seen = new Set();
+    out[k] = out[k].filter((p) => !seen.has(p.date) && seen.add(p.date)).sort((a, b) => a.date.localeCompare(b.date));
+  }
+  if (!out.THA?.length) throw new Error('ไม่พบข้อมูลการว่างงานรายไตรมาสของไทยจาก ILO');
+  return { series: out, source: 'ILOSTAT (รายไตรมาส)' };
+}

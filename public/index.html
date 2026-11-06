@@ -85,14 +85,14 @@
   <header>
     <div>
       <h1>ราคาวันนี้ — ไทยเทียบโลก</h1>
-      <div class="sub">ทอง · น้ำมัน · ค่าเงิน · หุ้น · เงินเฟ้อ ทุกตัวเลขแปลงเป็นเงินบาท</div>
+      <div class="sub">ทอง · น้ำมัน · ค่าเงิน · หุ้น · เงินเฟ้อ · การว่างงาน ไทยเทียบโลก</div>
     </div>
     <div><span class="muted" id="updated"></span> <button id="refresh">อัปเดต</button></div>
   </header>
   <div id="banner"></div>
   <main class="grid" id="app"><div class="card span-12">กำลังโหลดข้อมูล…</div></main>
   <footer>
-    แหล่งข้อมูล: สนพ. (โครงสร้างราคาน้ำมัน) · สมาคมค้าทองคำ · gold-api.com · บางจาก · ตลาดหลักทรัพย์ฯ · Yahoo Finance (ราคาดีเลย์) · Frankfurter · World Bank · Google News
+    แหล่งข้อมูล: สนพ. (โครงสร้างราคาน้ำมัน) · สมาคมค้าทองคำ · gold-api.com · บางจาก · ตลาดหลักทรัพย์ฯ · Yahoo Finance (ราคาดีเลย์) · Frankfurter · World Bank · ILOSTAT · Google News
     — ใช้ประกอบการติดตามเท่านั้น ไม่ใช่คำแนะนำการลงทุน
   </footer>
 </div>
@@ -397,6 +397,33 @@ function inflationCard(inf) {
   </section>`;
 }
 
+function unemploymentCard(u) {
+  if (!u) return '';
+  const th = u.countries.find((c) => c.code === 'THA'), w = u.countries.find((c) => c.code === 'WLD');
+  const qLabel = (d) => d ? `ไตรมาส ${d.slice(5)}/${+d.slice(0, 4) + 543 - 2500}` : '';
+  const diff = (v) => v == null ? '' : `${v > 0 ? 'เพิ่มขึ้น' : v < 0 ? 'ลดลง' : 'เท่าเดิม'} ${fmt(Math.abs(v))} จุด จากช่วงเดียวกันปีก่อน`;
+  return `<section class="card span-12">
+    <div class="card-head"><h2>อัตราการว่างงาน</h2><span class="muted">ILOSTAT (รายไตรมาส) · World Bank (รายปี)</span></div>
+    ${errBox(u.status.quarterly)}${errBox(u.status.annual)}
+    <div class="stats">
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย ${qLabel(th?.lastQuarter?.date)}</div>
+        <div class="value">${fmt(th?.lastQuarter?.value)}%</div><div class="note">${diff(th?.yoy)}</div></div>
+      <div class="stat"><div class="label">ไทย ทั้งปี ${esc(th?.lastYear?.date || '')}</div><div class="value">${fmt(th?.lastYear?.value)}%</div><div class="note">ค่าประมาณตามมาตรฐาน ILO</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ค่าเฉลี่ยโลก ปี ${esc(w?.lastYear?.date || '')}</div><div class="value">${fmt(w?.lastYear?.value)}%</div><div class="note">ไทยต่ำกว่าโลก ${w?.lastYear && th?.lastYear ? fmt(w.lastYear.value - th.lastYear.value) : '–'} จุด</div></div>
+    </div>
+    <div class="grid" style="margin-top:12px">
+      <div class="span-7"><div class="explain"><b>รายปี: ไทยเทียบค่าเฉลี่ยโลก (%)</b></div><div class="chart" id="unempChart"></div></div>
+      <div class="span-5"><table style="margin-top:6px"><tr><th>ประเทศ</th><th>ไตรมาสล่าสุด</th><th>ทั้งปี</th></tr>
+        ${u.countries.filter((c) => c.code !== 'WLD').map((c) => `<tr><td>${esc(c.name)}</td>
+          <td>${c.lastQuarter ? `${fmt(c.lastQuarter.value)}% <span class="muted">${qLabel(c.lastQuarter.date)}</span>` : '–'}</td>
+          <td>${c.lastYear ? `${fmt(c.lastYear.value)}% <span class="muted">${esc(c.lastYear.date)}</span>` : '–'}</td></tr>`).join('')}
+      </table></div>
+    </div>
+    <div class="explain">อัตราการว่างงานของไทยต่ำมากเมื่อเทียบกับประเทศอื่น ส่วนหนึ่งเพราะคนทำงานนอกระบบและภาคเกษตรมีสัดส่วนสูง และนิยามนับว่า "มีงานทำ" แม้ทำงานเพียง 1 ชั่วโมงในสัปดาห์ที่สำรวจ
+      จึงควรดูทิศทางที่เปลี่ยนไป มากกว่าระดับตัวเลข ข้อมูลรายไตรมาสไม่ได้ปรับฤดูกาล จึงเทียบกับไตรมาสเดียวกันของปีก่อน</div>
+  </section>`;
+}
+
 // ---------- โหลดข้อมูลและวาดหน้า ----------
 async function load() {
   $('#refresh').disabled = true;
@@ -411,7 +438,7 @@ async function load() {
         <div class="sub">คำนวณจากราคาโลกที่แปลงเป็นบาทแล้ว ใช้ดูทิศทางเท่านั้น ไม่ใช่การพยากรณ์ที่แม่นยำ</div></div>` +
       d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d) + newsCard(d.news) +
       `<div class="section-title span-12"><h2>ราคาปัจจุบัน ไทยเทียบโลก</h2></div>` +
-      goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) +
+      goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) + unemploymentCard(d.unemployment) +
       `<div class="card span-12 explain" style="margin:0">
         <b>ข้อควรรู้เรื่องการประมาณ</b> ข้อมูล สนพ. แสดงว่าค่าการตลาดของไทยแทบคงที่ เมื่อราคาเนื้อน้ำมัน (อิงตลาดสิงคโปร์) ขยับ กองทุนน้ำมันจะรับส่วนต่างไว้ก่อน
         แล้วราคาขายปลีกจะถูกปรับเป็นขั้นเมื่อแรงกดดันสะสมพอ แรงกดดันคิดจากต้นทุนที่เปลี่ยนไปตั้งแต่ปรับครั้งล่าสุด รวมกับภาระที่กองทุนอุดหนุนอยู่ เว็บนี้จึงบอก "ทิศทางที่น่าจะปรับ" ได้ดีกว่า "วันที่จะปรับ"
@@ -438,6 +465,12 @@ async function load() {
       lineChart($('#goldChart'), series, { height: 190, time: true, xLabel: (d) => new Date(d).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), format: (v) => fmt(v, 0), label: 'ทองไทยเทียบโลก วันนี้' });
     }
 
+    if (d.unemployment?.annual?.THA?.length && $('#unempChart')) {
+      lineChart($('#unempChart'), [
+        { name: 'ไทย', color: '--series-1', points: d.unemployment.annual.THA },
+        { name: 'ค่าเฉลี่ยโลก', color: '--series-2', points: d.unemployment.annual.WLD },
+      ], { height: 200, zero: true, format: (v) => fmt(v, 1) + '%', label: 'อัตราการว่างงานไทยเทียบโลก' });
+    }
     if (d.fx.usdthbHistory) {
       const pts = d.fx.usdthbHistory.slice(-260);
       lineChart($('#fxChart'), [{ name: 'USD/THB', color: '--series-1', points: pts }], { height: 170, xLabel: thMonth, label: 'USD/THB 1 ปี' });

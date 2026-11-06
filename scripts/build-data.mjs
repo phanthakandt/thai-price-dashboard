@@ -51,6 +51,7 @@ console.log('น้ำมันไทย    ', ok(data.oil.status.thai));
 console.log('น้ำมันโลก    ', ok(data.oil.status.rbob), '/', ok(data.oil.status.ulsd));
 data.stocks.forEach((s) => console.log(s.name.padEnd(12), ok(s.status)));
 console.log('เงินเฟ้อ     ', ok(data.inflation.status));
+console.log('ว่างงาน     ', ok(data.unemployment.status.annual), '/', ok(data.unemployment.status.quarterly), data.unemployment.countries.map((c) => `${c.code}:${c.lastQuarter?.date ?? '-'}/${c.lastYear?.date ?? '-'}`).join(' '));
 console.log('สนพ.        ', ok(data.oil.status.eppo), data.oil.eppo ? `ไฟล์วันที่ ${data.oil.eppo.date}, ประวัติ ${data.oil.eppo.history} วัน, เติมย้อนหลัง ${JSON.stringify(data.oil.eppo.backfill)}` : '');
 console.log('ตัวชี้นำ     ', data.leads.items.map((l) => `${l.symbol}:${l.status.ok ? 'OK' : 'X'}`).join(' '));
 console.log('ข่าว        ', data.news.map((n) => `${n.key}:${n.status.ok ? n.items.length : 'X ' + n.status.error}`).join(' '));

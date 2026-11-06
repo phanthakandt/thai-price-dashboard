@@ -156,3 +156,21 @@ export async function fetchEppoIndex() {
   for (let i = 0; i <= 95; i++) { const d = bkkDate(Date.now(), -i); const wd = new Date(d).getUTCDay(); if (wd !== 0 && wd !== 6) m[d] = `mock://${d}`; }
   return m;
 }
+export { UNEMP_COUNTRIES } from './sources.js';
+export async function fetchUnemploymentAnnual() {
+  const mk = (a) => a.map((v, i) => ({ date: String(2010 + i), value: v }));
+  return { series: {
+    THA: mk([0.6, 0.7, 0.6, 0.3, 0.6, 0.6, 0.7, 0.8, 0.8, 0.7, 1.1, 1.2, 0.9, 0.7, 0.8, 0.8]),
+    WLD: mk([6.0, 5.9, 5.9, 5.9, 5.8, 5.8, 5.8, 5.6, 5.4, 5.4, 6.6, 6.2, 5.2, 4.9, 4.8, 4.8]),
+    USA: mk([9.6, 8.9, 8.1, 7.4, 6.2, 5.3, 4.9, 4.4, 3.9, 3.7, 8.1, 5.4, 3.6, 3.6, 4.0, 4.2]),
+    MYS: mk([3.3, 3.1, 3.0, 3.1, 2.9, 3.1, 3.4, 3.4, 3.3, 3.3, 4.5, 4.7, 3.9, 3.9, 3.9, 3.8]),
+  }, source: 'MOCK' };
+}
+export async function fetchUnemploymentQuarterly() {
+  const q = (vals, start = 2022) => vals.map((v, i) => ({ date: `${start + Math.floor(i / 4)}Q${(i % 4) + 1}`, value: v }));
+  return { series: {
+    THA: q([1.5, 1.4, 1.2, 1.2, 1.0, 1.0, 1.0, 0.8, 0.8, 0.8, 0.8, 0.7, 0.7, 0.7, 0.5, 0.5, 0.7]),
+    MYS: q([4.1, 3.9, 3.7, 3.6, 3.5, 3.4, 3.4, 3.3, 3.3, 3.3, 3.2, 3.1, 3.1, 3.0, 3.0, 3.0, 3.0]),
+    USA: q([4.0, 3.6, 3.6, 3.4, 3.8, 3.5, 3.8, 3.6, 4.1, 4.1, 4.2, 4.0, 4.4, 4.1, 4.3, 4.3, 4.6]),
+  }, source: 'MOCK' };
+}
