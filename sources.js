@@ -298,3 +298,47 @@ export async function fetchUnemploymentQuarterly() {
   if (!out.THA?.length) throw new Error('ไม่พบข้อมูลการว่างงานรายไตรมาสของไทยจาก ILO');
   return { series: out, source: 'ILOSTAT (รายไตรมาส)' };
 }
+
+// ---------- 10) คนทำงานแยกตามอาชีพและภาคธุรกิจ (ILOSTAT รายไตรมาส หน่วย: พันคน) ----------
+export const OCCUPATIONS = {
+  1: 'ผู้บริหาร ผู้จัดการ', 2: 'ผู้ประกอบวิชาชีพ (แพทย์ วิศวกร ครู ฯลฯ)', 3: 'ช่างเทคนิคและผู้ช่วยวิชาชีพ',
+  4: 'เสมียน งานสำนักงาน', 5: 'พนักงานบริการและพนักงานขาย', 6: 'เกษตรกร ประมง ป่าไม้ (มีฝีมือ)',
+  7: 'ช่างฝีมือ (ก่อสร้าง โลหะ อิเล็กทรอนิกส์ ฯลฯ)', 8: 'ผู้ควบคุมเครื่องจักรและงานประกอบ คนขับรถ', 9: 'อาชีพพื้นฐาน / แรงงานทั่วไป', 0: 'ทหาร',
+};
+export const INDUSTRIES = {
+  A: 'เกษตร ป่าไม้ ประมง', B: 'เหมืองแร่', C: 'การผลิต (โรงงาน)', D: 'ไฟฟ้า ก๊าซ', E: 'ประปา จัดการของเสีย', F: 'ก่อสร้าง',
+  G: 'ขายส่ง ขายปลีก ซ่อมรถ', H: 'ขนส่งและคลังสินค้า', I: 'โรงแรมและร้านอาหาร', J: 'ไอทีและการสื่อสาร', K: 'การเงินและประกันภัย',
+  L: 'อสังหาริมทรัพย์', M: 'วิชาชีพ วิทยาศาสตร์ เทคนิค', N: 'บริการสนับสนุนธุรกิจ', O: 'ราชการและป้องกันประเทศ', P: 'การศึกษา',
+  Q: 'สุขภาพและสังคมสงเคราะห์', R: 'ศิลปะ บันเทิง นันทนาการ', S: 'บริการอื่น ๆ', T: 'ลูกจ้างในครัวเรือน', U: 'องค์การระหว่างประเทศ',
+};
+
+async function iloSeries(id, prefix) {
+  const from = new Date().getUTCFullYear() - 3;
+  const url = `https://rplumber.ilo.org/data/indicator/?id=${id}&ref_area=THA&sex=SEX_T&timefrom=${from}&format=.csv`;
+  const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status} จาก rplumber.ilo.org`);
+  const lines = (await res.text()).trim().split('\n');
+  const head = lines.shift().split(',').map((h) => h.replace(/"/g, ''));
+  const ix = (k) => head.indexOf(k);
+  const out = {}, seen = new Set();
+  for (const l of lines) {
+    const c = l.split(',').map((x) => x.replace(/"/g, ''));
+    const cls = c[ix('classif1')];
+    if (!cls.startsWith(prefix)) continue;
+    const key = cls.slice(prefix.length), date = c[ix('time')], v = toNum(c[ix('obs_value')]);
+    if (v == null || seen.has(key + date)) continue;
+    seen.add(key + date);
+    (out[key] ??= []).push({ date, value: v });
+  }
+  for (const k in out) out[k].sort((a, b) => a.date.localeCompare(b.date));
+  return out;
+}
+
+export async function fetchJobsByGroup() {
+  const [occ, ind] = await Promise.all([
+    iloSeries('EMP_TEMP_SEX_OCU_NB_Q', 'OCU_ISCO08_'),
+    iloSeries('EMP_TEMP_SEX_ECO_NB_Q', 'ECO_ISIC4_'),
+  ]);
+  if (!occ.TOTAL?.length && !ind.TOTAL?.length) throw new Error('ไม่พบข้อมูลคนทำงานแยกตามอาชีพของไทยจาก ILO');
+  return { occupation: occ, industry: ind, source: 'ILOSTAT (สำรวจภาวะการทำงานของประชากร)' };
+}

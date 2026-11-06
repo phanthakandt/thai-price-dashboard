@@ -68,6 +68,13 @@
   .section-title { margin-top: 8px; }
   .acc { font-size: 13px; color: var(--text-secondary); margin-top: 10px; }
   .live { color: var(--good); font-size: 11px; font-weight: 500; }
+  .tabs { display: flex; gap: 6px; margin-top: 14px; }
+  .tab { border-radius: 999px; padding: 5px 14px; }
+  .tab.on { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
+  table.jobs td { vertical-align: middle; }
+  .dbar { position: relative; height: 12px; }
+  .dbar::before { content: ''; position: absolute; left: 50%; top: -3px; bottom: -3px; border-left: 1px solid var(--axis); }
+  .dbar > div { position: absolute; top: 0; height: 12px; border-radius: 3px; }
   .news { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
   .news h3 { font-size: 14px; margin: 0 0 6px; font-weight: 600; }
   .news a { display: block; color: var(--text-primary); text-decoration: none; font-size: 13px; margin-top: 8px; line-height: 1.45; }
@@ -85,7 +92,7 @@
   <header>
     <div>
       <h1>ราคาวันนี้ — ไทยเทียบโลก</h1>
-      <div class="sub">ทอง · น้ำมัน · ค่าเงิน · หุ้น · เงินเฟ้อ · การว่างงาน ไทยเทียบโลก</div>
+      <div class="sub">ทอง · น้ำมัน · ค่าเงิน · หุ้น · เงินเฟ้อ · การว่างงาน · อาชีพ ไทยเทียบโลก</div>
     </div>
     <div><span class="muted" id="updated"></span> <button id="refresh">อัปเดต</button></div>
   </header>
@@ -424,6 +431,40 @@ function unemploymentCard(u) {
   </section>`;
 }
 
+function jobsCard(j) {
+  if (!j || (!j.occupation && !j.industry)) return j?.status && !j.status.ok ? `<section class="card span-12"><h2>คนทำงานแยกตามอาชีพ</h2>${errBox(j.status)}</section>` : '';
+  const qLabel = (d) => d ? `ไตรมาส ${d.slice(5)}/${+d.slice(0, 4) + 543 - 2500}` : '';
+  const k = (v) => v == null ? '–' : fmt(v * 1000 / 1e6, 2) + ' ล้าน';   // พันคน -> ล้านคน
+  const kc = (v) => v == null ? '–' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmt(Math.abs(v), 0)} พัน`;
+  const tbl = (t, id) => {
+    if (!t) return '<div class="muted">ไม่มีข้อมูล</div>';
+    const rows = [...t.rows].sort((a, b) => (b.change ?? -1e9) - (a.change ?? -1e9));
+    const max = Math.max(...rows.map((r) => Math.abs(r.change || 0)), 1);
+    return `<table class="jobs"><tr><th>กลุ่ม</th><th>คนทำงาน</th><th>สัดส่วน</th><th colspan="2">เทียบ${qLabel(t.prevYear)}</th></tr>
+      ${rows.map((r) => {
+        const w = r.change == null ? 0 : (Math.abs(r.change) / max) * 50;
+        const bar = r.change == null ? '' : `<div class="dbar"><div style="${r.change >= 0 ? `left:50%;width:${w}%;background:var(--series-1)` : `right:50%;width:${w}%;background:var(--series-2)`}"></div></div>`;
+        return `<tr><td>${esc(r.name)}</td><td>${k(r.now)}</td><td>${fmt(r.share, 1)}%</td>
+          <td>${kc(r.change)} <span class="muted">${r.changePct == null ? '' : `(${r.changePct >= 0 ? '+' : ''}${fmt(r.changePct, 1)}%)`}</span></td><td style="width:22%">${bar}</td></tr>`;
+      }).join('')}</table>`;
+  };
+  const t = j.occupation || j.industry;
+  return `<section class="card span-12">
+    <div class="card-head"><h2>คนทำงานแยกตามอาชีพและภาคธุรกิจ</h2><span class="muted">${qLabel(t.quarter)} · ILOSTAT · หน่วย พันคน</span></div>
+    ${errBox(j.status)}
+    <div class="stats"><div class="stat"><div class="label">คนมีงานทำทั้งหมด ${qLabel(t.quarter)}</div><div class="value">${k(t.total)} คน</div>
+      <div class="note">${t.totalChange == null || isNaN(t.totalChange) ? '' : `${t.totalChange >= 0 ? 'เพิ่มขึ้น' : 'ลดลง'} ${fmt(Math.abs(t.totalChange), 0)} พันคน จาก${qLabel(t.prevYear)}`}</div></div></div>
+    <div class="tabs" role="tablist">
+      <button class="tab on" data-t="occ">ตามอาชีพ (9 กลุ่ม)</button><button class="tab" data-t="ind">ตามภาคธุรกิจ</button></div>
+    <div class="legend" style="margin:6px 0"><span><span class="chip" style="background:var(--series-1)"></span>คนทำงานเพิ่มขึ้น</span><span><span class="chip" style="background:var(--series-2)"></span>คนทำงานลดลง</span></div>
+    <div data-p="occ">${tbl(j.occupation)}</div><div data-p="ind" hidden>${tbl(j.industry)}</div>
+    <div class="explain">เรียงจากกลุ่มที่คนทำงานเพิ่มขึ้นมากที่สุด เทียบกับไตรมาสเดียวกันของปีก่อน (ข้อมูลไม่ได้ปรับฤดูกาล)
+      กลุ่มที่คนทำงานลดลงต่อเนื่องเป็นสัญญาณว่างานกลุ่มนั้นหดตัว แต่ไม่ได้แปลว่าคนเหล่านั้นตกงานทั้งหมด เพราะอาจย้ายไปทำงานกลุ่มอื่น
+      ตัวเลขมาจากการสำรวจตัวอย่าง กลุ่มเล็กจึงคลาดเคลื่อนได้มาก (ตัดกลุ่มที่มีคนทำงานต่ำกว่า 3 หมื่นคนออก)
+      ข้อมูลคนว่างงานแยกตามอาชีพเดิมไม่มีใน API ฟรี ดูได้จากรายงานของสำนักงานสถิติแห่งชาติ</div>
+  </section>`;
+}
+
 // ---------- โหลดข้อมูลและวาดหน้า ----------
 async function load() {
   $('#refresh').disabled = true;
@@ -438,7 +479,7 @@ async function load() {
         <div class="sub">คำนวณจากราคาโลกที่แปลงเป็นบาทแล้ว ใช้ดูทิศทางเท่านั้น ไม่ใช่การพยากรณ์ที่แม่นยำ</div></div>` +
       d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d) + newsCard(d.news) +
       `<div class="section-title span-12"><h2>ราคาปัจจุบัน ไทยเทียบโลก</h2></div>` +
-      goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) + unemploymentCard(d.unemployment) +
+      goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) + unemploymentCard(d.unemployment) + jobsCard(d.jobs) +
       `<div class="card span-12 explain" style="margin:0">
         <b>ข้อควรรู้เรื่องการประมาณ</b> ข้อมูล สนพ. แสดงว่าค่าการตลาดของไทยแทบคงที่ เมื่อราคาเนื้อน้ำมัน (อิงตลาดสิงคโปร์) ขยับ กองทุนน้ำมันจะรับส่วนต่างไว้ก่อน
         แล้วราคาขายปลีกจะถูกปรับเป็นขั้นเมื่อแรงกดดันสะสมพอ แรงกดดันคิดจากต้นทุนที่เปลี่ยนไปตั้งแต่ปรับครั้งล่าสุด รวมกับภาระที่กองทุนอุดหนุนอยู่ เว็บนี้จึงบอก "ทิศทางที่น่าจะปรับ" ได้ดีกว่า "วันที่จะปรับ"
@@ -465,6 +506,12 @@ async function load() {
       lineChart($('#goldChart'), series, { height: 190, time: true, xLabel: (d) => new Date(d).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), format: (v) => fmt(v, 0), label: 'ทองไทยเทียบโลก วันนี้' });
     }
 
+    document.querySelectorAll('.tabs').forEach((tabs) => tabs.addEventListener('click', (ev) => {
+      const b = ev.target.closest('.tab'); if (!b) return;
+      const card = tabs.closest('.card');
+      card.querySelectorAll('.tab').forEach((x) => x.classList.toggle('on', x === b));
+      card.querySelectorAll('[data-p]').forEach((p) => { p.hidden = p.dataset.p !== b.dataset.t; });
+    }));
     if (d.unemployment?.annual?.THA?.length && $('#unempChart')) {
       lineChart($('#unempChart'), [
         { name: 'ไทย', color: '--series-1', points: d.unemployment.annual.THA },
