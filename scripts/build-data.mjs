@@ -34,7 +34,7 @@ const prevHistory = MOCK ? S.seedHistory() : (await loadPrev('history.json')) ||
 const prevCache = MOCK ? null : await loadPrev('cache.json');
 
 const history = createHistory(path.join(OUT, 'history.json'), { persist: true, seed: prevHistory });
-const { buildData, exportCache } = createBuilder({ S, history, mock: MOCK, cacheSeed: prevCache, ttlScale: 0 });
+const { buildData, exportCache } = createBuilder({ S, history, mock: MOCK, cacheSeed: prevCache, ttlScale: 0, backfillPerRun: 45 });
 
 const data = await buildData();
 history.save();
@@ -51,4 +51,8 @@ console.log('น้ำมันไทย    ', ok(data.oil.status.thai));
 console.log('น้ำมันโลก    ', ok(data.oil.status.rbob), '/', ok(data.oil.status.ulsd));
 data.stocks.forEach((s) => console.log(s.name.padEnd(12), ok(s.status)));
 console.log('เงินเฟ้อ     ', ok(data.inflation.status));
+console.log('สนพ.        ', ok(data.oil.status.eppo), data.oil.eppo ? `ไฟล์วันที่ ${data.oil.eppo.date}, ประวัติ ${data.oil.eppo.history} วัน, เติมย้อนหลัง ${JSON.stringify(data.oil.eppo.backfill)}` : '');
+console.log('ตัวชี้นำ     ', data.leads.items.map((l) => `${l.symbol}:${l.status.ok ? 'OK' : 'X'}`).join(' '));
+console.log('ข่าว        ', data.news.map((n) => `${n.key}:${n.status.ok ? n.items.length : 'X ' + n.status.error}`).join(' '));
+data.oil.signals.forEach((s) => console.log('สัญญาณ', s.key, s.method, s.estimate?.toFixed(2), JSON.stringify(s.backtest)));
 console.log(`ประวัติ: น้ำมัน ${history.get().oil.length} วัน, ทอง ${history.get().gold.length} จุด`);

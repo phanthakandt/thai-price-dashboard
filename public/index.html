@@ -66,6 +66,12 @@
   .bar { height: 14px; border-radius: 0 4px 4px 0; }
   .bar-val { font-variant-numeric: tabular-nums; text-align: right; }
   .section-title { margin-top: 8px; }
+  .acc { font-size: 13px; color: var(--text-secondary); margin-top: 10px; }
+  .live { color: var(--good); font-size: 11px; font-weight: 500; }
+  .news { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 18px; }
+  .news h3 { font-size: 14px; margin: 0 0 6px; font-weight: 600; }
+  .news a { display: block; color: var(--text-primary); text-decoration: none; font-size: 13px; margin-top: 8px; line-height: 1.45; }
+  .news a:hover { text-decoration: underline; }
   .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 16px;
     border: 1px solid var(--border); background: var(--bg); }
   .pill-icon { font-size: 13px; }
@@ -86,7 +92,7 @@
   <div id="banner"></div>
   <main class="grid" id="app"><div class="card span-12">กำลังโหลดข้อมูล…</div></main>
   <footer>
-    แหล่งข้อมูล: สมาคมค้าทองคำ · gold-api.com · บางจาก · Yahoo Finance (ราคาดีเลย์) · Frankfurter · World Bank
+    แหล่งข้อมูล: สนพ. (โครงสร้างราคาน้ำมัน) · สมาคมค้าทองคำ · gold-api.com · บางจาก · ตลาดหลักทรัพย์ฯ · Yahoo Finance (ราคาดีเลย์) · Frankfurter · World Bank · Google News
     — ใช้ประกอบการติดตามเท่านั้น ไม่ใช่คำแนะนำการลงทุน
   </footer>
 </div>
@@ -195,27 +201,44 @@ function dirPill(dir, text) {
   return `<div class="pill ${dir > 0 ? 'p-up' : dir < 0 ? 'p-down' : 'p-flat'}"><span class="pill-icon">${icon}</span>${text}</div>`;
 }
 
+function accLine(bt, unit) {
+  if (!bt || !bt.n) return `<div class="muted">ความแม่นย้อนหลัง: ยังมีข้อมูลไม่พอ</div>`;
+  return `<div class="acc"><b>ทดสอบย้อนหลัง:</b> ${bt.n} ครั้งที่แบบจำลองบอกให้ปรับ ≥ ${unit} ราคาไทยปรับไปทางเดียวกันภายใน 2 วัน
+    <b>${fmt(bt.hitRate * 100, 0)}%</b>${bt.sizeRatio ? ` · ขนาดที่ปรับจริงประมาณ ${fmt(bt.sizeRatio * 100, 0)}% ของที่ประมาณ` : ''}</div>`;
+}
+
 function signalOilCard(s) {
   if (!s.ok) return `<section class="card span-6"><h2>${esc(s.title)}</h2><div class="err">ดึงข้อมูลไม่สำเร็จ: ${esc(s.error)}</div></section>`;
   const head = s.announced != null
     ? dirPill(Math.sign(s.announced), `ประกาศแล้ว: พรุ่งนี้ ${s.announced > 0 ? 'ขึ้น' : 'ลง'} ${fmt(Math.abs(s.announced))} บาท/ลิตร`)
     : s.direction === 0
-      ? dirPill(0, `ราคาโลกยังเปลี่ยนไม่มาก (${sgn(s.estimate)} บาท/ลิตร)`)
+      ? dirPill(0, `ยังไม่มีแรงกดดันให้ปรับ (${sgn(s.estimate)} บาท/ลิตร)`)
       : dirPill(s.direction, `มีแนวโน้ม${s.direction > 0 ? 'ขึ้น' : 'ลง'} ประมาณ ${fmt(Math.abs(s.estimate))} บาท/ลิตร`);
+  const m = s.model, st = s.structure;
+  const why = s.method === 'eppo' ? `<table style="margin-top:10px">
+      <tr><th>เหตุผลของสัญญาณ</th><th>บาท/ลิตร</th></tr>
+      <tr><td>ค่าการตลาดตอนนี้ (สนพ. ${thDate(m.eppoDate)}${Math.abs(m.mmNow - st.mm) > 0.001 ? ' ปรับตามราคาหน้าปั๊มล่าสุด' : ''})</td><td>${fmt(m.mmNow)}</td></tr>
+      <tr><td>ราคาโลกหลังวันที่ของไฟล์ สนพ. ทำให้ต้นทุนเปลี่ยน</td><td>${sgn(m.dExr)}</td></tr>
+      <tr><td>ค่าการตลาดที่คาดว่าจะเหลือถ้ายังไม่ปรับราคา</td><td>${fmt(m.mmProjected)}</td></tr>
+      <tr><td>ค่าการตลาดระดับปกติ (ค่ากลาง ${m.normDays} วัน)</td><td>${fmt(m.norm)}</td></tr>
+      <tr><td><b>ราคาไทยน่าจะปรับ (รวม VAT)</b></td><td><b>${sgn(s.estimate)}</b></td></tr></table>`
+    : `<div class="explain">ยังไม่มีข้อมูล สนพ. จึงประมาณจากการเปลี่ยนแปลงของราคาโลกตั้งแต่ไทยปรับครั้งล่าสุด</div>`;
+  const struct = st ? `<div class="explain" style="margin-top:12px"><b>ราคา ${fmt(st.retail)} บาท มาจาก</b>
+      ราคาเนื้อน้ำมัน ${fmt(st.exr)} · ภาษี ${fmt(st.tax)} · กองทุนน้ำมัน ${sgn(st.fund)} · ค่าการตลาด ${fmt(st.mm)} · VAT และอื่น ๆ ${fmt(st.other)}</div>` : '';
   return `<section class="card span-6">
-    <div class="card-head"><h2>${esc(s.title)}</h2><span class="muted">เทียบกับ ${esc(s.proxyName)}</span></div>
+    <div class="card-head"><h2>${esc(s.title)}</h2><span class="muted">${s.method === 'eppo' ? 'แบบจำลองค่าการตลาด (สนพ.)' : 'เทียบราคาโลก'}</span></div>
     ${head}
-    <div class="stats" style="margin-top:14px">
+    ${accLine(s.backtest, '0.30 บาท')}
+    <div class="stats" style="margin-top:12px">
       <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย: ${esc(s.thaiName || '–')}</div>
         <div class="value">${fmt(s.thaiNow)}</div><div class="note">บาท/ลิตร${s.lastChange ? ` · ปรับล่าสุด ${thDate(s.lastChange.date)} (${sgn(s.lastChange.delta)})` : ''}</div></div>
-      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ราคาโลก แปลงเป็นบาท</div>
-        <div class="value">${fmt(s.worldNow)}</div><div class="note">บาท/ลิตร ก่อนภาษี · ${fmt(s.worldUsd, 3)} USD/แกลลอน</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>${esc(s.proxyName)}</div>
+        <div class="value">${fmt(s.worldNow)}</div><div class="note">บาท/ลิตร ก่อนภาษี · 1 วัน ${sgn(s.change1d)} · 7 วัน ${sgn(s.change7d)}</div></div>
     </div>
-    <table style="margin-top:10px"><tr><th>ราคาโลกเปลี่ยน (บาท/ลิตร รวม VAT)</th><th>1 วัน</th><th>3 วัน</th><th>7 วัน</th><th>${s.lastChange ? 'ตั้งแต่ไทยปรับ' : '–'}</th></tr>
-      <tr><td>คิดเป็นบาท (รวมผลค่าเงิน)</td><td>${sgn(s.change1d)}</td><td>${sgn(s.change3d)}</td><td>${sgn(s.change7d)}</td><td><b>${s.lastChange ? sgn(s.estimate) : '–'}</b></td></tr></table>
+    ${why}${struct}
     <div class="explain" style="margin-top:12px"><b>การเปลี่ยนแปลงสะสม 90 วัน (บาท/ลิตร)</b> ถ้าเส้นโลกห่างจากเส้นไทยมาก แปลว่าไทยยังปรับไม่ทัน</div>
     <div class="chart" id="oilChart-${s.key}"></div>
-    ${s.chart.thaiDays < 2 ? '<div class="muted">ยังไม่มีประวัติราคาไทย ระบบจะเริ่มบันทึกตั้งแต่วันที่รันเว็บ</div>' : ''}
+    ${s.chart.mm.length > 1 ? `<div class="explain" style="margin-top:8px"><b>ค่าการตลาด (บาท/ลิตร)</b> สูงกว่าปกติ = มีช่องให้ลดราคา ต่ำกว่าปกติ = มีแรงกดดันให้ขึ้นราคา</div><div class="chart" id="mmChart-${s.key}"></div>` : ''}
   </section>`;
 }
 
@@ -227,14 +250,16 @@ function signalGoldCard(gold) {
     ? dirPill(0, `ราคาโลกยังสอดคล้องกับราคาไทย (ต่าง ${sgn(s.estimate, 0)} บาท)`)
     : dirPill(s.direction, `ทองไทยมีแนวโน้ม${s.direction > 0 ? 'ขึ้น' : 'ลง'} ประมาณ ${fmt(Math.abs(s.estimateRounded), 0)} บาท`);
   const ref = s.method === 'ref'
-    ? `ประกาศล่าสุด ${thTime(s.refTime)} อิง Gold Spot ${fmt(s.refSpot)} และ ${fmt(s.refFx)} บาท/USD<br>ตอนนี้ Gold Spot ${fmt(s.spotNow)} และ ${fmt(s.fxNow)} บาท/USD`
+    ? `ประกาศล่าสุด ${thTime(s.refTime)} อิง Gold Spot ${fmt(s.refSpot)} และ ${fmt(s.refFx)} บาท/USD<br>ตอนนี้ Gold Spot <span id="goldSpotNow">${fmt(s.spotNow)}</span> และ ${fmt(s.fxNow)} บาท/USD`
     : 'คำนวณจากประวัติที่บันทึกไว้';
   return `<section class="card span-6">
     <div class="card-head"><h2>ทองคำแท่ง</h2><span class="muted">วันนี้สมาคมฯ ปรับราคาแล้ว ${s.adjustmentsToday} ครั้ง</span></div>
-    ${head}
+    <div id="goldPill">${head}</div>
+    ${gold.accuracy?.n ? `<div class="acc"><b>ความแม่นที่บันทึกได้:</b> ${gold.accuracy.n} ครั้งที่ต่าง ≥ 100 บาท สมาคมฯ ปรับครั้งถัดไปไปทางเดียวกัน <b>${fmt(gold.accuracy.hitRate * 100, 0)}%</b></div>`
+      : `<div class="muted">ความแม่น: กำลังเก็บข้อมูล (${gold.accuracy?.snapshots ?? 0} จุด)</div>`}
     <div class="stats" style="margin-top:14px">
       <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย ขายออก (ล่าสุด)</div><div class="value">${fmt(s.thaiSell, 0)}</div><div class="note">บาท / ทอง 1 บาท</div></div>
-      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ราคาที่ราคาโลกตอนนี้ชี้</div><div class="value">${fmt(s.implied, 0)}</div><div class="note">ต่างจากราคาไทย <b>${sgn(s.estimate, 0)}</b> บาท</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ราคาที่ราคาโลกตอนนี้ชี้ <span class="live" id="goldLive"></span></div><div class="value" id="goldImplied">${fmt(s.implied, 0)}</div><div class="note">ต่างจากราคาไทย <b id="goldDiff">${sgn(s.estimate, 0)}</b> บาท</div></div>
     </div>
     <div class="explain" style="margin-top:8px">${ref}</div>
     <div class="explain" style="margin-top:12px"><b>วันนี้ (บาท / ทอง 1 บาท)</b> เส้นฟ้าคือราคาที่สมาคมฯ ประกาศแต่ละครั้ง เส้นส้มคือราคาโลกที่ปรับฐานให้เทียบกันได้ ทองไทยตามราคาโลกภายในไม่กี่นาทีถึงชั่วโมง</div>
@@ -244,18 +269,32 @@ function signalGoldCard(gold) {
 
 function signalMarketCard(d) {
   const by = Object.fromEntries(d.stocks.map((s) => [s.symbol, s]));
-  const us = by['^GSPC'], w = by['URTH'], set = by['^SET.BK'];
+  const set = by['^SET.BK'];
+  const L = d.leads || { items: [], score: 0, counted: 0 };
+  const mood = L.score >= 2 ? [1, 'บรรยากาศตลาดโลกเป็นบวก'] : L.score <= -2 ? [-1, 'บรรยากาศตลาดโลกเป็นลบ'] : [0, 'บรรยากาศตลาดโลกผสม'];
   const fx = d.fx.live?.change1d ?? d.fx.change1d;
+  const chg = (l) => l.change == null ? '–' : l.yield ? `${l.change >= 0 ? '+' : '−'}${fmt(Math.abs(l.change), 1)} bp` : fmtPct(l.change);
+  const good = (l) => l.change == null ? '' : (Math.sign(l.change) * l.sign > 0 ? '<span class="up">ดี</span>' : Math.sign(l.change) * l.sign < 0 ? '<span class="down">กดดัน</span>' : '');
+  return `<section class="card span-6">
+    <div class="card-head"><h2>ตัวชี้นำตลาดหุ้นไทย</h2><span class="muted">SET ล่าสุด ${fmt(set?.price)} (${set?.change1d == null ? '–' : (set.change1d >= 0 ? '+' : '') + fmt(set.change1d) + '%'})</span></div>
+    <div class="pill ${mood[0] > 0 ? 'p-down' : mood[0] < 0 ? 'p-up' : 'p-flat'}"><span class="pill-icon">${mood[0] > 0 ? '▲' : mood[0] < 0 ? '▼' : '●'}</span>${mood[1]} (คะแนน ${L.score >= 0 ? '+' : ''}${L.score} จาก ${L.counted} ตัว)</div>
+    <table style="margin-top:12px"><tr><th>ตัวชี้</th><th>ล่าสุด</th><th>เปลี่ยน</th><th>ต่อหุ้นไทย</th></tr>
+      ${L.items.map((l) => `<tr><td>${esc(l.name)}<div class="muted">${esc(l.note)}</div></td><td>${l.price == null ? '<span class="err">ไม่มีข้อมูล</span>' : fmt(l.price)}</td><td>${chg(l)}</td><td>${good(l)}</td></tr>`).join('')}
+      <tr><td>ค่าเงินบาท (USD/THB)<div class="muted">บาทอ่อน = ทอง/น้ำมันในรูปบาทแพงขึ้น</div></td><td>${fmt(d.fx.live?.usdthb ?? d.fx.rates?.USD)}</td><td>${fmtPct(fx)}</td><td>${fx == null ? '' : fx > 0 ? 'บาทอ่อน' : 'บาทแข็ง'}</td></tr>
+    </table>
+    <div class="explain">ฟิวเจอร์สสหรัฐและตลาดเอเชียซื้อขายระหว่างวันของไทย จึงสะท้อนบรรยากาศ "ตอนนี้" ได้ดีกว่าราคาปิดเมื่อคืน
+      คะแนนนับจากตัวชี้ที่ขยับเกิน 0.15% (บอนด์เกิน 2 bp) เป็นภาพรวมคร่าว ๆ ไม่ใช่คำแนะนำการลงทุน</div>
+  </section>`;
+}
+
+function newsCard(news) {
+  if (!news?.length) return '';
+  const ago = (t) => { if (!t) return ''; const h = (Date.now() - t) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} นาทีก่อน` : h < 24 ? `${Math.round(h)} ชม.ก่อน` : `${Math.round(h / 24)} วันก่อน`; };
   return `<section class="card span-12">
-    <div class="card-head"><h2>ตลาดหุ้นและค่าเงิน</h2><span class="muted">ผลจากตลาดต่างประเทศเมื่อคืน</span></div>
-    <div class="stats">
-      <div class="stat"><div class="label">S&P 500 วันทำการล่าสุด${us?.lastDate ? ' (' + thDate(us.lastDate) + ')' : ''}</div><div class="value">${fmtPct(us?.change1d)}</div>
-        <div class="note">ตลาดสหรัฐปิดตอนเช้าตามเวลาไทย SET มักเปิดตามทิศทางนี้ แต่ไม่เสมอไป</div></div>
-      <div class="stat"><div class="label">MSCI World</div><div class="value">${fmtPct(w?.change1d)}</div><div class="note">ภาพรวมหุ้นทั่วโลก</div></div>
-      <div class="stat"><div class="label">SET ล่าสุด</div><div class="value">${fmtPct(set?.change1d)}</div><div class="note">${fmt(set?.price)} จุด</div></div>
-      <div class="stat"><div class="label">ค่าเงินบาท (USD/THB)</div><div class="value">${fmt(d.fx.live?.usdthb ?? d.fx.rates?.USD)}</div>
-        <div class="note">${fx == null ? '' : `บาท${fx > 0 ? 'อ่อน' : 'แข็ง'}ค่า ${fmt(Math.abs(fx))}% จากวันก่อน ${fx > 0 ? 'ทำให้ราคาทองและน้ำมันในรูปบาทสูงขึ้น' : 'ทำให้ราคาทองและน้ำมันในรูปบาทถูกลง'}`}</div></div>
-    </div>
+    <div class="card-head"><h2>ข่าวล่าสุดที่เกี่ยวข้อง</h2><span class="muted">หัวข้อข่าวจาก Google News · กดเพื่ออ่านที่ต้นทาง</span></div>
+    <div class="news">${news.map((n) => `<div><h3>${esc(n.title)}</h3>
+      ${n.status.ok ? n.items.map((it) => `<a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><div class="muted">${esc(it.source)} · ${ago(it.time)}</div>`).join('') : `<div class="err">${esc(n.status.error)}</div>`}
+    </div>`).join('')}</div>
   </section>`;
 }
 
@@ -358,18 +397,20 @@ async function load() {
   $('#refresh').disabled = true;
   try {
     const d = await (await fetch('data.json', { cache: 'no-store' })).json();
+    lastData = d;
     $('#banner').innerHTML = d.mock ? '<div class="banner">โหมดข้อมูลตัวอย่าง (MOCK) — ตัวเลขในหน้านี้เป็นของสมมติ ไม่ใช่ราคาจริง</div>' : '';
     $('#updated').textContent = 'อัปเดต ' + new Date(d.generatedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     charts.length = 0;
     $('#app').innerHTML =
       `<div class="section-title span-12"><h2>สัญญาณทิศทาง: ราคาโลกเปลี่ยน → ราคาไทยน่าจะปรับตาม</h2>
         <div class="sub">คำนวณจากราคาโลกที่แปลงเป็นบาทแล้ว ใช้ดูทิศทางเท่านั้น ไม่ใช่การพยากรณ์ที่แม่นยำ</div></div>` +
-      d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d).replace('span-12', 'span-6') +
+      d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d) + newsCard(d.news) +
       `<div class="section-title span-12"><h2>ราคาปัจจุบัน ไทยเทียบโลก</h2></div>` +
       goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) +
       `<div class="card span-12 explain" style="margin:0">
-        <b>ข้อควรรู้เรื่องการประมาณ</b> ราคาน้ำมันไทยอิงราคาตลาดสิงคโปร์ (MOPS) ซึ่งไม่มีให้ใช้ฟรี เว็บนี้จึงใช้ราคาน้ำมันสำเร็จรูปตลาดนิวยอร์ก (RBOB, ULSD) ที่มักเคลื่อนไหวทิศทางเดียวกันแทน
-        ตัวเลขจึงบอกทิศทางและขนาดคร่าว ๆ ได้ แต่ไม่ตรงทุกสตางค์ ราคาดีเซลอาจถูกตรึงโดยกองทุนน้ำมันเชื้อเพลิง จึงอาจไม่ปรับตามตลาดโลก
+        <b>ข้อควรรู้เรื่องการประมาณ</b> สัญญาณน้ำมันใช้โครงสร้างราคารายวันของ สนพ. (ราคา ณ โรงกลั่นอิงตลาดสิงคโปร์) ร่วมกับหลักว่าผู้ค้ามักปรับราคาให้ค่าการตลาดกลับสู่ระดับปกติ
+        ส่วนการขยับของราคาโลกหลังวันที่ของไฟล์ สนพ. ประมาณจากตลาดนิวยอร์ก (RBOB, ULSD) ซึ่งเคลื่อนไหวทิศทางเดียวกับสิงคโปร์แต่ไม่ตรงทุกสตางค์
+        ราคาดีเซลอาจถูกดูแลโดยกองทุนน้ำมันเชื้อเพลิง จึงอาจไม่ปรับตามแบบจำลอง ตัวเลข "ทดสอบย้อนหลัง" ในแต่ละการ์ดบอกว่าเชื่อได้แค่ไหน
       </div>`;
 
     for (const s of d.oil.signals) {
@@ -377,6 +418,11 @@ async function load() {
       const series = [{ name: 'ราคาโลก (รวม VAT)', short: 'โลก', color: '--series-2', points: s.chart.world }];
       if (s.chart.thai.length) series.unshift({ name: `ไทย: ${s.thaiName}`, short: 'ไทย', color: '--series-1', points: s.chart.thai });
       lineChart($(`#oilChart-${s.key}`), series, { height: 190, zero: true, xLabel: thDate, format: (v) => sgn(v), label: `${s.title} ไทยเทียบโลก` });
+      if (s.chart.mm.length > 1 && $(`#mmChart-${s.key}`)) {
+        const mmS = [{ name: 'ค่าการตลาด', short: 'ค่าการตลาด', color: '--series-1', points: s.chart.mm }];
+        if (s.model?.norm != null) mmS.push({ name: `ระดับปกติ (${fmt(s.model.norm)})`, short: 'ปกติ', color: '--series-3', points: s.chart.mm.map((p) => ({ date: p.date, value: s.model.norm })) });
+        lineChart($(`#mmChart-${s.key}`), mmS, { height: 150, xLabel: thDate, format: (v) => fmt(v), label: `ค่าการตลาด ${s.title}` });
+      }
     }
     if (d.gold.signal?.ok) {
       const c = d.gold.signal.chart;
@@ -407,10 +453,30 @@ async function load() {
         { name: 'ค่าเฉลี่ยโลก', color: '--series-2', points: d.inflation.world },
       ], { height: 220, zero: true, format: (v) => fmt(v, 1) + '%', label: 'เงินเฟ้อไทยเทียบโลก' });
     }
+    if (!d.mock) liveGold();
   } catch (e) {
     $('#app').innerHTML = `<div class="card span-12 err">โหลดข้อมูลไม่สำเร็จ: ${esc(e.message)}</div>`;
   } finally { $('#refresh').disabled = false; }
 }
+// ทอง: ดึงราคาโลกทุก 1 นาทีขณะเปิดหน้าเว็บ แล้วคำนวณราคาที่ราคาโลกชี้ใหม่ (สูตรเดียวกับฝั่งเซิร์ฟเวอร์)
+let lastData = null;
+async function liveGold() {
+  const s = lastData?.gold?.signal;
+  if (!s?.ok || s.method !== 'ref' || !s.refSpot) return;
+  try {
+    const j = await (await fetch('https://api.gold-api.com/price/XAU', { cache: 'no-store' })).json();
+    const spot = +j.price; if (!spot) return;
+    const implied = s.thaiSell * (spot / s.refSpot) * (s.fxNow / s.refFx);
+    const est = implied - s.thaiSell, dir = Math.abs(est) < 50 ? 0 : Math.sign(est);
+    $('#goldImplied').textContent = fmt(implied, 0);
+    $('#goldDiff').textContent = sgn(est, 0);
+    $('#goldSpotNow') && ($('#goldSpotNow').textContent = fmt(spot));
+    $('#goldLive').textContent = '● สด ' + new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    $('#goldPill').innerHTML = dir === 0 ? dirPill(0, `ราคาโลกยังสอดคล้องกับราคาไทย (ต่าง ${sgn(est, 0)} บาท)`)
+      : dirPill(dir, `ทองไทยมีแนวโน้ม${dir > 0 ? 'ขึ้น' : 'ลง'} ประมาณ ${fmt(Math.abs(Math.round(est / 50) * 50), 0)} บาท`);
+  } catch { /* ใช้ค่าจากรอบล่าสุดต่อ */ }
+}
+setInterval(liveGold, 60 * 1000);
 $('#refresh').onclick = load;
 let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => charts.forEach((c) => c()), 150); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => charts.forEach((c) => c()));

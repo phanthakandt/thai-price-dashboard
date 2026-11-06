@@ -31,6 +31,13 @@ const Y = {
   '^GSPC': [walk(5800, 370, 0.012, 0.0006), 'USD'],
   URTH: [walk(155, 370, 0.012, 0.0004), 'USD'],
   'THB=X': [fxHist.map((p) => ({ ...p })), 'THB'],
+  'ES=F': [walk(5850, 370, 0.012, 0.0006), 'USD'],
+  'NQ=F': [walk(20500, 370, 0.015, 0.0007), 'USD'],
+  '^N225': [walk(38000, 370, 0.013, 0.0004), 'JPY'],
+  '^HSI': [walk(20000, 370, 0.015, 0.0002), 'HKD'],
+  '^VIX': [walk(16, 370, 0.06, 0), 'USD'],
+  'DX-Y.NYB': [walk(104, 370, 0.004, -0.0001), 'USD'],
+  '^TNX': [walk(4.3, 370, 0.02, 0), 'USD'],
 };
 // ทำให้ช่วง 3 วันล่าสุดราคาเบนซินโลกขึ้นแรง เพื่อให้เห็นสัญญาณ
 Y['RB=F'][0].slice(-3).forEach((p, i) => (p.value *= 1 + 0.025 * (i + 1)));
@@ -121,4 +128,26 @@ export async function fetchInflation() {
   const w = [3.3, 4.8, 3.7, 2.6, 2.3, 1.4, 1.6, 2.2, 2.4, 2.2, 1.9, 3.5, 8.0, 5.7, 4.2, 3.6];
   const mk = (a) => a.map((v, i) => ({ date: String(2010 + i), value: v }));
   return { thailand: mk(th), world: mk(w), source: 'MOCK' };
+}
+
+// ---- โครงสร้างราคา สนพ. สมมติ: ค่าการตลาดแกว่งเพราะราคาไทยปรับช้ากว่าราคาโลก ----
+const eppoSym = { g95: ['แก๊สโซฮอล์ 95', 'RB=F', 7.475, 3.37], diesel: ['ดีเซล', 'HO=F', 7.662, -2.37] };
+const eppoFund = {};
+export async function fetchEppo(date) {
+  if (date > bkkDate() || date < bkkDate(Date.now(), -95)) throw Object.assign(new Error('ไม่พบไฟล์ (MOCK)'), { notFound: true });
+  const products = {};
+  for (const [k, [name, sym, tax, fund]] of Object.entries(eppoSym)) {
+    const prev = new Date(new Date(date).getTime() - 864e5).toISOString().slice(0, 10);
+    const exr = (at(Y[sym][0], prev) * at(fxHist, prev)) / 3.785;
+    const retail = [...oilHist].reverse().find((r) => r.date <= date)?.prices[name] ?? thaiStart[name][0];
+    eppoFund[k] ??= retail / 1.07 - exr - tax - 2.4; // ให้ค่าการตลาดเริ่มที่ ~2.4
+    const mm = retail / 1.07 - exr - tax - eppoFund[k];
+    products[k] = { name: k, exr, discount: 0, excise: tax / 1.1, fund: eppoFund[k], ws: exr + tax + eppoFund[k], mm, retail };
+  }
+  return { date, fx: at(fxHist, date), products, avgMM: { all: 2.45, diesel: 2.0 }, source: 'MOCK' };
+}
+export async function fetchNews(q) {
+  const t = q.includes('น้ำมัน') ? ['ผู้ค้าประกาศลดราคาเบนซินพรุ่งนี้ 40 สตางค์ (ตัวอย่าง)', 'กบน. คงอัตราเงินกองทุนดีเซล (ตัวอย่าง)']
+    : q.includes('ทอง') ? ['ทองเปิดตลาดบวก 100 บาท (ตัวอย่าง)'] : q.includes('SET') ? ['SET ปิดลบตามตลาดภูมิภาค (ตัวอย่าง)'] : ['บาทอ่อนค่าตามดอลลาร์ (ตัวอย่าง)'];
+  return t.map((title, i) => ({ title, link: 'https://example.com/', source: 'ข่าวตัวอย่าง', time: Date.now() - (i + 1) * 3600e3 }));
 }
