@@ -112,22 +112,33 @@ export async function fetchThaiOil() {
 }
 
 // ---------- 5) ราคาตลาดโลก/ดัชนีหุ้น: Yahoo Finance chart (ฟรี แต่ไม่เป็นทางการ ข้อมูลดีเลย์) ----------
-export async function fetchYahoo(symbol) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d`;
-  const j = await getJSON(url);
+async function yahooChart(symbol, query) {
+  const j = await getJSON(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?${query}`);
   const r = j?.chart?.result?.[0];
   if (!r) throw new Error(`Yahoo ไม่มีข้อมูล ${symbol}`);
   const closes = r.indicators?.quote?.[0]?.close || [];
   const history = (r.timestamp || [])
     .map((ts, i) => ({ date: isoDate(new Date(ts * 1000)), value: closes[i] }))
     .filter((p) => p.value != null);
-  return {
-    symbol,
-    currency: r.meta.currency,
-    price: r.meta.regularMarketPrice,
-    prevClose: r.meta.chartPreviousClose ?? r.meta.previousClose,
-    history,
-  };
+  return { meta: r.meta, history };
+}
+
+export async function fetchYahoo(symbol) {
+  let { meta, history } = await yahooChart(symbol, 'range=1y&interval=1d');
+  // บางดัชนี (เช่น ^SET.BK) ได้ข้อมูลย้อนหลังมาไม่ครบเมื่อใช้ range ลองขอแบบระบุช่วงวันที่แทน
+  if (history.length < 30) {
+    const now = Math.floor(Date.now() / 1000);
+    try {
+      const alt = await yahooChart(symbol, `period1=${now - 400 * 86400}&period2=${now}&interval=1d`);
+      if (alt.history.length > history.length) history = alt.history;
+    } catch { /* ใช้ชุดเดิม */ }
+  }
+  // ราคาปิดวันก่อน = ราคาปิดล่าสุดที่อยู่ก่อนวันของราคาล่าสุด
+  // (meta.chartPreviousClose คือราคาก่อนวันแรกของช่วงข้อมูล ไม่ใช่เมื่อวาน)
+  const lastDate = meta.regularMarketTime ? isoDate(new Date(meta.regularMarketTime * 1000)) : history.at(-1)?.date;
+  const before = history.filter((p) => p.date < lastDate);
+  const prevClose = before.length ? before.at(-1).value : (meta.previousClose ?? meta.chartPreviousClose);
+  return { symbol, currency: meta.currency, price: meta.regularMarketPrice, prevClose, history };
 }
 
 // ---------- 6) เงินเฟ้อ: World Bank API (รายปี ฟรี) ----------
