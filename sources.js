@@ -178,18 +178,33 @@ const EPPO_KEYS = [
 ];
 const excelDate = (n) => new Date(Math.round((n - 25569) * 864e5)).toISOString().slice(0, 10);
 
-export async function fetchEppo(date) {
-  const [y, m] = date.split('-');
-  // ไฟล์มักอยู่ในโฟลเดอร์ของเดือนที่อัปโหลด ถ้าไม่เจอให้ลองเดือนก่อน/ถัดไป
-  const months = [`${y}/${m}`];
+const EPPO_LIST = 'https://www.eppo.go.th/data-energy-statistic/energy-price-th/%e0%b9%82%e0%b8%84%e0%b8%a3%e0%b8%87%e0%b8%aa%e0%b8%a3%e0%b9%89%e0%b8%b2%e0%b8%87%e0%b8%a3%e0%b8%b2%e0%b8%84%e0%b8%b2%e0%b8%99%e0%b9%89%e0%b8%b3%e0%b8%a1%e0%b8%b1%e0%b8%99-lpg/';
+// รายชื่อไฟล์จากหน้ารวมของ สนพ. (ชื่อไฟล์ไม่สม่ำเสมอ เช่น 2026-9-5, 2026-09-05, 2026-9-30-1)
+export async function fetchEppoIndex(pages = 12) {
+  const map = {};
+  for (let p = 1; p <= pages; p++) {
+    let html;
+    try { html = await getText(p === 1 ? EPPO_LIST : `${EPPO_LIST}page/${p}/`); } catch { break; }
+    for (const m of html.matchAll(/href="([^"]*pt-price-st-(\d{4})-(\d{1,2})-(\d{1,2})(?:-\d+)?\.xlsx)"/gi)) {
+      const date = `${m[2]}-${m[3].padStart(2, '0')}-${m[4].padStart(2, '0')}`;
+      map[date] ??= m[1];
+    }
+  }
+  return map;
+}
+
+export async function fetchEppo(date, knownUrl = null) {
+  const [y, m, dd] = date.split('-');
   const d = new Date(date + 'T00:00:00Z');
+  const folders = [`${y}/${m}`];
   for (const off of [1, -1]) {
     const t = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + off, 1));
-    months.push(`${t.getUTCFullYear()}/${String(t.getUTCMonth() + 1).padStart(2, '0')}`);
+    folders.push(`${t.getUTCFullYear()}/${String(t.getUTCMonth() + 1).padStart(2, '0')}`);
   }
+  const names = [...new Set([`${y}-${m}-${dd}`, `${y}-${+m}-${+dd}`, `${y}-${+m}-${dd}`])];
+  const urls = knownUrl ? [knownUrl] : folders.flatMap((f) => names.map((n) => `https://www.eppo.go.th/wp-content/uploads/${f}/pt-price-st-${n}.xlsx`));
   let buf = null, lastErr;
-  for (const folder of months) {
-    const url = `https://www.eppo.go.th/wp-content/uploads/${folder}/pt-price-st-${date}.xlsx`;
+  for (const url of urls) {
     const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(20000) });
     if (res.ok) { buf = Buffer.from(await res.arrayBuffer()); break; }
     lastErr = `HTTP ${res.status}`;

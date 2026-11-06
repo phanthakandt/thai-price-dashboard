@@ -151,3 +151,8 @@ export async function fetchNews(q) {
     : q.includes('ทอง') ? ['ทองเปิดตลาดบวก 100 บาท (ตัวอย่าง)'] : q.includes('SET') ? ['SET ปิดลบตามตลาดภูมิภาค (ตัวอย่าง)'] : ['บาทอ่อนค่าตามดอลลาร์ (ตัวอย่าง)'];
   return t.map((title, i) => ({ title, link: 'https://example.com/', source: 'ข่าวตัวอย่าง', time: Date.now() - (i + 1) * 3600e3 }));
 }
+export async function fetchEppoIndex() {
+  const m = {};
+  for (let i = 0; i <= 95; i++) { const d = bkkDate(Date.now(), -i); const wd = new Date(d).getUTCDay(); if (wd !== 0 && wd !== 6) m[d] = `mock://${d}`; }
+  return m;
+}
