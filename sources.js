@@ -133,6 +133,16 @@ export async function fetchYahoo(symbol) {
       if (alt.history.length > history.length) history = alt.history;
     } catch { /* ใช้ชุดเดิม */ }
   }
+  // SET: Yahoo มักให้ประวัติมาไม่ครบ ใช้ API ของตลาดหลักทรัพย์ฯ แทน (ข้อมูลรายวัน 1 ปี)
+  if (symbol === '^SET.BK' && history.length < 30) {
+    try {
+      const j = await getJSON('https://www.set.or.th/api/set/index/SET/chart-quotation?period=1Y&accumulated=false',
+        { headers: { Referer: 'https://www.set.or.th/th/market/index/set/overview' } });
+      const h = (j.quotations || []).map((q) => ({ date: String(q.localDatetime || q.datetime).slice(0, 10), value: toNum(q.price) }))
+        .filter((p) => p.value != null);
+      if (h.length > history.length) history = h;
+    } catch (e) { console.error('[SET history]', e.message); }
+  }
   // ราคาปิดวันก่อน = ราคาปิดล่าสุดที่อยู่ก่อนวันของราคาล่าสุด
   // (meta.chartPreviousClose คือราคาก่อนวันแรกของช่วงข้อมูล ไม่ใช่เมื่อวาน)
   const lastDate = meta.regularMarketTime ? isoDate(new Date(meta.regularMarketTime * 1000)) : history.at(-1)?.date;
