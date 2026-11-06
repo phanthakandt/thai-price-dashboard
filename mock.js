@@ -1,7 +1,7 @@
 // ข้อมูลสมมติสำหรับทดสอบหน้าเว็บโดยไม่ต้องต่ออินเทอร์เน็ต (MOCK=1)
 // ตัวเลขทั้งหมดเป็นของปลอม ไม่ใช่ราคาจริง
 export { OZ_TO_GRAM, BAHT_GOLD_GRAM, THAI_GOLD_PURITY, LITRE_PER_BARREL } from './sources.js';
-import { bkkDate } from './history.js';
+import { bkkDate } from './lib/history.js';
 
 let seed = 42;
 const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);

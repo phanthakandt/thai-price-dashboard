@@ -55,14 +55,28 @@ PORT=8080 node server.js  # เปลี่ยนพอร์ต
 ## โครงสร้างไฟล์
 
 ```
-server.js        เว็บเซิร์ฟเวอร์ + cache + คำนวณการเทียบราคาและสัญญาณทิศทาง (GET /api/data)
-history.js       บันทึกประวัติราคาไทยลง data/history.json
+server.js        เว็บเซิร์ฟเวอร์สำหรับรันเอง (GET /data.json)
+lib/build.js     ตรรกะหลัก: เทียบราคาและคำนวณสัญญาณทิศทาง
+lib/history.js   บันทึกประวัติราคาไทย
+scripts/build-data.mjs  สร้างเว็บ static สำหรับ GitHub Pages
+.github/workflows/update.yml  ตั้งเวลาอัปเดตทุก 15 นาที
 sources.js       ฟังก์ชันดึงข้อมูลจากแต่ละแหล่ง
 mock.js          ข้อมูลสมมติสำหรับทดสอบ
 public/index.html  หน้าเว็บ (รองรับโหมดมืด, มือถือ)
 ```
 
-## นำขึ้นออนไลน์
+## GitHub Pages (อัปเดตอัตโนมัติ)
+
+ไฟล์ `.github/workflows/update.yml` สั่งให้ GitHub Actions รัน `scripts/build-data.mjs` ทุก 15 นาที
+สคริปต์จะดึงราคาใหม่ โหลดประวัติราคาจากเว็บที่ deploy ไว้รอบก่อนมาบันทึกต่อ แล้ว deploy หน้าเว็บกับไฟล์ `data.json` ขึ้น Pages
+ไม่ต้องมีเซิร์ฟเวอร์ของตัวเอง
+
+- เปิดใช้: Settings → Pages → Source เลือก **GitHub Actions**
+- สั่งอัปเดตทันที: แท็บ Actions → Update prices → Run workflow
+- GitHub อาจเลื่อนเวลารันตามรอบออกไปบ้างในช่วงที่มีคนใช้เยอะ
+- ถ้า repo ไม่มีความเคลื่อนไหว (commit) นาน 60 วัน GitHub จะหยุดรันตามรอบ ให้กด Enable workflow ในแท็บ Actions เพื่อเปิดใหม่
+
+## นำขึ้นออนไลน์แบบมีเซิร์ฟเวอร์
 
 โปรเจกต์ไม่มี dependency จึงนำไปรันบนบริการที่รองรับ Node.js ได้เกือบทุกที่ เช่น Render, Railway, Fly.io หรือ VPS
 ใช้คำสั่งเริ่มต้นเป็น `node server.js` และบริการเหล่านี้จะกำหนด `PORT` ให้เอง

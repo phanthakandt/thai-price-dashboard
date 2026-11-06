@@ -338,7 +338,7 @@ function inflationCard(inf) {
 async function load() {
   $('#refresh').disabled = true;
   try {
-    const d = await (await fetch('/api/data')).json();
+    const d = await (await fetch('data.json', { cache: 'no-store' })).json();
     $('#banner').innerHTML = d.mock ? '<div class="banner">โหมดข้อมูลตัวอย่าง (MOCK) — ตัวเลขในหน้านี้เป็นของสมมติ ไม่ใช่ราคาจริง</div>' : '';
     $('#updated').textContent = 'อัปเดต ' + new Date(d.generatedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     charts.length = 0;

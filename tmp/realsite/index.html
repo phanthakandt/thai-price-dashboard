@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ราคาวันนี้ — ไทยเทียบโลก</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #f4f3ef; --surface-1: #fcfcfb; --border: #e3e1da;
+    --text-primary: #0b0b0b; --text-secondary: #52514e; --text-muted: #7a7974;
+    --grid: #e8e6df; --axis: #b9b7ae;
+    --series-1: #2a78d6; --series-2: #eb6834; --series-3: #1baf7a;
+    --good: #0f7b3e; --critical: #c42b2b; --warn-bg: #fff4d6; --warn-text: #6b4b00;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --bg: #111110; --surface-1: #1a1a19; --border: #2e2d2b;
+      --text-primary: #f0efec; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+      --grid: #2a2928; --axis: #55544f;
+      --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70;
+      --good: #4cc27a; --critical: #ef6b6b; --warn-bg: #3a2e10; --warn-text: #f3d48a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text-primary);
+    font-family: 'IBM Plex Sans Thai', system-ui, sans-serif; font-size: 15px; line-height: 1.5; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 16px 48px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 16px; }
+  h1 { font-size: 26px; margin: 0; font-weight: 600; }
+  h2 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+  .sub { color: var(--text-secondary); font-size: 13px; }
+  .muted { color: var(--text-muted); font-size: 12px; }
+  button { font: inherit; font-size: 13px; padding: 6px 14px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface-1); color: var(--text-primary); cursor: pointer; }
+  button:hover { border-color: var(--axis); }
+  .banner { background: var(--warn-bg); color: var(--warn-text); padding: 10px 14px; border-radius: 10px; margin-bottom: 16px; font-size: 14px; }
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; }
+  .card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px; min-width: 0; }
+  .span-12 { grid-column: span 12; } .span-6 { grid-column: span 6; } .span-7 { grid-column: span 7; } .span-5 { grid-column: span 5; }
+  @media (max-width: 860px) { .span-6, .span-7, .span-5 { grid-column: span 12; } }
+  .card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 12px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .stat .label { color: var(--text-secondary); font-size: 13px; }
+  .stat .value { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .stat .note { color: var(--text-muted); font-size: 12px; }
+  .chip { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 6px; vertical-align: 0; }
+  .up { color: var(--good); } .down { color: var(--critical); }
+  table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; font-size: 14px; }
+  th, td { text-align: right; padding: 7px 6px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; white-space: normal; }
+  th { color: var(--text-secondary); font-weight: 500; font-size: 12px; }
+  .err { color: var(--critical); font-size: 13px; }
+  .explain { color: var(--text-secondary); font-size: 13px; margin-top: 12px; }
+  .chart { position: relative; margin-top: 8px; }
+  .chart svg { display: block; width: 100%; overflow: visible; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-secondary); margin-top: 4px; }
+  .tip { position: absolute; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.12); white-space: nowrap; display: none; z-index: 2; }
+  .tip b { font-weight: 600; }
+  .bars { display: grid; grid-template-columns: minmax(110px, auto) 1fr auto; gap: 6px 10px; align-items: center; font-size: 13px; }
+  .bar-track { height: 14px; }
+  .bar { height: 14px; border-radius: 0 4px 4px 0; }
+  .bar-val { font-variant-numeric: tabular-nums; text-align: right; }
+  .section-title { margin-top: 8px; }
+  .pill { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 10px; font-weight: 600; font-size: 16px;
+    border: 1px solid var(--border); background: var(--bg); }
+  .pill-icon { font-size: 13px; }
+  .p-up .pill-icon { color: var(--critical); } .p-down .pill-icon { color: var(--good); } .p-flat .pill-icon { color: var(--text-muted); }
+  footer { margin-top: 24px; color: var(--text-muted); font-size: 12px; }
+  footer a { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>ราคาวันนี้ — ไทยเทียบโลก</h1>
+      <div class="sub">ทอง · น้ำมัน · ค่าเงิน · หุ้น · เงินเฟ้อ ทุกตัวเลขแปลงเป็นเงินบาท</div>
+    </div>
+    <div><span class="muted" id="updated"></span> <button id="refresh">อัปเดต</button></div>
+  </header>
+  <div id="banner"></div>
+  <main class="grid" id="app"><div class="card span-12">กำลังโหลดข้อมูล…</div></main>
+  <footer>
+    แหล่งข้อมูล: สมาคมค้าทองคำ · gold-api.com · บางจาก · Yahoo Finance (ราคาดีเลย์) · Frankfurter · World Bank
+    — ใช้ประกอบการติดตามเท่านั้น ไม่ใช่คำแนะนำการลงทุน
+  </footer>
+</div>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const fmt = (v, d = 2) => v == null ? '–' : v.toLocaleString('th-TH', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtPct = (v) => v == null ? '–' : `<span class="${v >= 0 ? 'up' : 'down'}">${v >= 0 ? '▲' : '▼'} ${fmt(Math.abs(v))}%</span>`;
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const errBox = (st) => st && !st.ok ? `<div class="err">ดึงข้อมูลไม่สำเร็จ: ${esc(st.error)}</div>` :
+  st?.stale ? `<div class="muted">แสดงข้อมูลล่าสุดที่มี (อัปเดตใหม่ไม่สำเร็จ)</div>` : '';
+
+// ---------- กราฟเส้นแบบ SVG + เส้นตามเมาส์และ tooltip ----------
+const charts = [];
+function lineChart(el, series, opt = {}) {
+  charts.push(() => drawLine(el, series, opt));
+  drawLine(el, series, opt);
+}
+function drawLine(el, series, opt) {
+  const W = el.clientWidth || 600, H = opt.height || 240;
+  const m = { t: 10, r: series.length > 1 ? 96 : 16, b: 26, l: 48 };
+  const all = series.flatMap((s) => s.points);
+  if (!all.length) { el.innerHTML = '<div class="muted">ไม่มีข้อมูล</div>'; return; }
+  const dates = [...new Set(all.map((p) => p.date))].sort();
+  const xi = new Map(dates.map((d, i) => [d, i]));
+  let lo = Math.min(...all.map((p) => p.value)), hi = Math.max(...all.map((p) => p.value));
+  if (opt.zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
+  const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
+  const x = (d) => m.l + (xi.get(d) / Math.max(1, dates.length - 1)) * (W - m.l - m.r);
+  const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+  const f = opt.format || ((v) => fmt(v));
+  // เส้นกริดแนวนอน
+  const step = niceStep((hi - lo) / 4);
+  let grid = '';
+  for (let k = Math.ceil(lo / step); k * step <= hi; k++) {
+    const v = Math.abs(k) < 1e-9 ? 0 : k * step;
+    grid += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="${css(Math.abs(v) < 1e-9 && opt.zero ? '--axis' : '--grid')}"/>`
+          + `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${css('--text-muted')}">${f(v, true)}</text>`;
+  }
+  // ป้ายแกน x: จุดเริ่ม กลาง ท้าย
+  const xt = [0, Math.floor(dates.length / 2), dates.length - 1].map((i) => dates[i])
+    .map((d, k) => `<text x="${x(d)}" y="${H - 6}" font-size="11" fill="${css('--text-muted')}" text-anchor="${['start', 'middle', 'end'][k]}">${opt.xLabel ? opt.xLabel(d) : d}</text>`).join('');
+  // ป้ายชื่อท้ายเส้น: ดันออกจากกันไม่ให้ซ้อน
+  const labels = series.length > 1 ? series.filter((s) => s.points.length)
+    .map((s) => ({ s, x: x(s.points.at(-1).date) + 6, y: y(s.points.at(-1).value) + 4 }))
+    .sort((a, b) => a.y - b.y) : [];
+  for (let i = 1; i < labels.length; i++) labels[i].y = Math.max(labels[i].y, labels[i - 1].y + 15);
+  const paths = series.map((s) => {
+    const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join('');
+    return `<path d="${d}" fill="none" stroke="${css(s.color)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+  }).join('') + labels.map((l) => `<text x="${l.x}" y="${l.y}" font-size="12" fill="${css('--text-primary')}">${esc(l.s.short || l.s.name)}</text>`).join('');
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(opt.label || '')}">${grid}${xt}${paths}
+    <line class="xh" y1="${m.t}" y2="${H - m.b}" stroke="${css('--axis')}" stroke-width="1" style="display:none"/>
+    <g class="dots"></g>
+    <rect x="${m.l}" y="0" width="${W - m.l - m.r}" height="${H}" fill="transparent"/></svg>
+    <div class="tip"></div>` +
+    (series.length > 1 ? `<div class="legend">${series.map((s) => `<span><span class="chip" style="background:var(${s.color})"></span>${esc(s.name)}</span>`).join('')}</div>` : '');
+  const svg = el.querySelector('svg'), tip = el.querySelector('.tip'), xh = el.querySelector('.xh'), dots = el.querySelector('.dots');
+  const lookups = series.map((s) => new Map(s.points.map((p) => [p.date, p.value])));
+  svg.addEventListener('pointermove', (ev) => {
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * (W / r.width);
+    const i = Math.round(((px - m.l) / (W - m.l - m.r)) * (dates.length - 1));
+    const d = dates[Math.max(0, Math.min(dates.length - 1, i))];
+    xh.setAttribute('x1', x(d)); xh.setAttribute('x2', x(d)); xh.style.display = '';
+    dots.innerHTML = series.map((s, k) => lookups[k].has(d)
+      ? `<circle cx="${x(d)}" cy="${y(lookups[k].get(d))}" r="4" fill="${css(s.color)}" stroke="${css('--surface-1')}" stroke-width="2"/>` : '').join('');
+    tip.innerHTML = `<div class="muted">${opt.xLabel ? opt.xLabel(d) : d}</div>` + series.map((s, k) => lookups[k].has(d)
+      ? `<div><span class="chip" style="background:var(${s.color})"></span>${esc(s.short || s.name)} <b>${f(lookups[k].get(d))}</b></div>` : '').join('');
+    tip.style.display = 'block';
+    const left = (x(d) / W) * r.width;
+    tip.style.left = Math.min(left + 12, r.width - tip.offsetWidth) + 'px';
+    tip.style.top = '8px';
+  });
+  svg.addEventListener('pointerleave', () => { tip.style.display = 'none'; xh.style.display = 'none'; dots.innerHTML = ''; });
+}
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const n = raw / p;
+  return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * p;
+}
+const thMonth = (d) => new Date(d).toLocaleDateString('th-TH', { month: 'short', year: '2-digit' });
+
+// ---------- สัญญาณทิศทาง ----------
+const sgn = (v, d = 2) => v == null ? '–' : (v > 0 ? '+' : v < 0 ? '−' : '') + fmt(Math.abs(v), d);
+const thDate = (d) => new Date(d).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+const thTime = (t) => new Date(t).toLocaleString('th-TH', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+function dirPill(dir, text) {
+  const icon = dir > 0 ? '▲' : dir < 0 ? '▼' : '●';
+  return `<div class="pill ${dir > 0 ? 'p-up' : dir < 0 ? 'p-down' : 'p-flat'}"><span class="pill-icon">${icon}</span>${text}</div>`;
+}
+
+function signalOilCard(s) {
+  if (!s.ok) return `<section class="card span-6"><h2>${esc(s.title)}</h2><div class="err">ดึงข้อมูลไม่สำเร็จ: ${esc(s.error)}</div></section>`;
+  const head = s.announced != null
+    ? dirPill(Math.sign(s.announced), `ประกาศแล้ว: พรุ่งนี้ ${s.announced > 0 ? 'ขึ้น' : 'ลง'} ${fmt(Math.abs(s.announced))} บาท/ลิตร`)
+    : s.direction === 0
+      ? dirPill(0, `ราคาโลกยังเปลี่ยนไม่มาก (${sgn(s.estimate)} บาท/ลิตร)`)
+      : dirPill(s.direction, `มีแนวโน้ม${s.direction > 0 ? 'ขึ้น' : 'ลง'} ประมาณ ${fmt(Math.abs(s.estimate))} บาท/ลิตร`);
+  return `<section class="card span-6">
+    <div class="card-head"><h2>${esc(s.title)}</h2><span class="muted">เทียบกับ ${esc(s.proxyName)}</span></div>
+    ${head}
+    <div class="stats" style="margin-top:14px">
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย: ${esc(s.thaiName || '–')}</div>
+        <div class="value">${fmt(s.thaiNow)}</div><div class="note">บาท/ลิตร${s.lastChange ? ` · ปรับล่าสุด ${thDate(s.lastChange.date)} (${sgn(s.lastChange.delta)})` : ''}</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ราคาโลก แปลงเป็นบาท</div>
+        <div class="value">${fmt(s.worldNow)}</div><div class="note">บาท/ลิตร ก่อนภาษี · ${fmt(s.worldUsd, 3)} USD/แกลลอน</div></div>
+    </div>
+    <table style="margin-top:10px"><tr><th>ราคาโลกเปลี่ยน (บาท/ลิตร รวม VAT)</th><th>1 วัน</th><th>3 วัน</th><th>7 วัน</th><th>${s.lastChange ? 'ตั้งแต่ไทยปรับ' : '–'}</th></tr>
+      <tr><td>คิดเป็นบาท (รวมผลค่าเงิน)</td><td>${sgn(s.change1d)}</td><td>${sgn(s.change3d)}</td><td>${sgn(s.change7d)}</td><td><b>${s.lastChange ? sgn(s.estimate) : '–'}</b></td></tr></table>
+    <div class="explain" style="margin-top:12px"><b>การเปลี่ยนแปลงสะสม 90 วัน (บาท/ลิตร)</b> ถ้าเส้นโลกห่างจากเส้นไทยมาก แปลว่าไทยยังปรับไม่ทัน</div>
+    <div class="chart" id="oilChart-${s.key}"></div>
+    ${s.chart.thaiDays < 2 ? '<div class="muted">ยังไม่มีประวัติราคาไทย ระบบจะเริ่มบันทึกตั้งแต่วันที่รันเว็บ</div>' : ''}
+  </section>`;
+}
+
+function signalGoldCard(gold) {
+  const s = gold.signal;
+  if (!s?.ok) return `<section class="card span-6"><h2>ทองคำ</h2>${errBox(gold.status.thai)}${errBox(gold.status.world)}
+    <div class="muted" style="margin-top:8px">กำลังเก็บประวัติราคา (มี ${s?.snaps ?? 0} จุด) สัญญาณจะแสดงหลังเก็บได้อย่างน้อย 2 จุด ระบบบันทึกทุก 2 นาที</div></section>`;
+  const head = s.direction === 0
+    ? dirPill(0, `ราคาโลกยังเปลี่ยนไม่ถึง 50 บาท (${sgn(s.estimate, 0)} บาท)`)
+    : dirPill(s.direction, `ทองไทยมีแนวโน้ม${s.direction > 0 ? 'ขึ้น' : 'ลง'} ประมาณ ${fmt(Math.abs(s.estimateRounded), 0)} บาท`);
+  return `<section class="card span-6">
+    <div class="card-head"><h2>ทองคำแท่ง</h2><span class="muted">สมาคมฯ ปรับราคาครั้งละ 50 บาท</span></div>
+    ${head}
+    <div class="stats" style="margin-top:14px">
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย ขายออก</div><div class="value">${fmt(s.thaiSell, 0)}</div><div class="note">บาท / ทอง 1 บาท</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ราคาโลก แปลงเป็นบาท</div><div class="value">${fmt(gold.worldThbPerBaht, 0)}</div><div class="note">${s.sinceLabel} (${thTime(s.refTime)}) <b>${sgn(s.estimate, 0)}</b> บาท</div></div>
+    </div>
+    <div class="explain" style="margin-top:12px"><b>48 ชั่วโมงล่าสุด (บาท / ทอง 1 บาท)</b> ทองไทยตามราคาโลกภายในไม่กี่นาทีถึงชั่วโมง</div>
+    <div class="chart" id="goldChart"></div>
+  </section>`;
+}
+
+function signalMarketCard(d) {
+  const by = Object.fromEntries(d.stocks.map((s) => [s.symbol, s]));
+  const us = by['^GSPC'], w = by['URTH'], set = by['^SET.BK'];
+  const fx = d.fx.change1d;
+  return `<section class="card span-12">
+    <div class="card-head"><h2>ตลาดหุ้นและค่าเงิน</h2><span class="muted">ผลจากตลาดต่างประเทศเมื่อคืน</span></div>
+    <div class="stats">
+      <div class="stat"><div class="label">S&P 500 วันทำการล่าสุด${us?.lastDate ? ' (' + thDate(us.lastDate) + ')' : ''}</div><div class="value">${fmtPct(us?.change1d)}</div>
+        <div class="note">ตลาดสหรัฐปิดตอนเช้าตามเวลาไทย SET มักเปิดตามทิศทางนี้ แต่ไม่เสมอไป</div></div>
+      <div class="stat"><div class="label">MSCI World</div><div class="value">${fmtPct(w?.change1d)}</div><div class="note">ภาพรวมหุ้นทั่วโลก</div></div>
+      <div class="stat"><div class="label">SET ล่าสุด</div><div class="value">${fmtPct(set?.change1d)}</div><div class="note">${fmt(set?.price)} จุด</div></div>
+      <div class="stat"><div class="label">ค่าเงินบาท (USD/THB)</div><div class="value">${fmt(d.fx.rates?.USD)}</div>
+        <div class="note">${fx == null ? '' : `บาท${fx > 0 ? 'อ่อน' : 'แข็ง'}ค่า ${fmt(Math.abs(fx))}% จากวันก่อน ${fx > 0 ? 'ทำให้ราคาทองและน้ำมันในรูปบาทสูงขึ้น' : 'ทำให้ราคาทองและน้ำมันในรูปบาทถูกลง'}`}</div></div>
+    </div>
+  </section>`;
+}
+
+// ---------- แต่ละส่วน ----------
+function goldCard(g) {
+  const t = g.thai;
+  return `<section class="card span-6">
+    <div class="card-head"><h2>ทองคำ</h2><span class="muted">${esc(t?.asOf || '')}</span></div>
+    ${errBox(g.status.thai)}${errBox(g.status.world)}
+    <div class="stats">
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ทองแท่งไทย ขายออก</div>
+        <div class="value">${fmt(t?.barSell, 0)}</div><div class="note">บาท / ทอง 1 บาท · รับซื้อ ${fmt(t?.barBuy, 0)}</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ราคาโลก แปลงเป็นบาท</div>
+        <div class="value">${fmt(g.worldThbPerBaht, 0)}</div><div class="note">บาท / ทอง 1 บาท (96.5%)</div></div>
+      <div class="stat"><div class="label">ทองไทยแพงกว่าโลก</div>
+        <div class="value">${g.premiumPct == null ? '–' : (g.premiumPct >= 0 ? '+' : '') + fmt(g.premiumPct) + '%'}</div>
+        <div class="note">${g.premiumPct == null ? '' : (g.premiumPct >= 0 ? 'แพงกว่า ' : 'ถูกกว่า ') + fmt(Math.abs(t.barSell - g.worldThbPerBaht), 0) + ' บาท'}</div></div>
+    </div>
+    <table style="margin-top:14px">
+      <tr><th></th><th>ราคา</th></tr>
+      <tr><td>ทองรูปพรรณ ขายออก / รับซื้อ</td><td>${fmt(t?.ornamentSell, 0)} / ${fmt(t?.ornamentBuy, 0)}</td></tr>
+      <tr><td>Gold Spot (USD / ออนซ์)</td><td>${fmt(g.worldUsdPerOz)}</td></tr>
+      <tr><td>ราคาโลก (บาท / กรัม, 99.99%)</td><td>${fmt(g.worldThbPerGram)}</td></tr>
+    </table>
+    <div class="explain">ราคาโลกคิดจาก Gold Spot × USD/THB × (15.244 กรัม × 96.5%) ÷ 31.1035 กรัมต่อออนซ์ ส่วนต่างที่เหลือคือค่าพรีเมียม ค่าขนส่ง และส่วนต่างของร้านค้า</div>
+  </section>`;
+}
+
+function oilCard(o) {
+  const items = o.thai?.items || [];
+  const rows = [
+    ...o.crude.map((c) => ({ name: `น้ำมันดิบ ${c.name}`, v: c.thbPerLitre, color: '--series-2', note: `${fmt(c.usdPerBarrel)} USD/บาร์เรล` })),
+    ...items.map((i) => ({ name: i.name, v: i.today, color: '--series-1', tomorrow: i.tomorrow })),
+  ];
+  const max = Math.max(...rows.map((r) => r.v || 0), 1);
+  return `<section class="card span-6">
+    <div class="card-head"><h2>น้ำมัน (บาท / ลิตร)</h2><span class="muted">${esc(o.thai?.date || '')}</span></div>
+    ${errBox(o.status.thai)}${errBox(o.status.brent)}
+    <div class="legend" style="margin:0 0 10px"><span><span class="chip" style="background:var(--series-1)"></span>ราคาหน้าปั๊มไทย (บางจาก)</span>
+      <span><span class="chip" style="background:var(--series-2)"></span>ราคาน้ำมันดิบโลก แปลงเป็นบาท/ลิตร</span></div>
+    <div class="bars">${rows.map((r) => {
+      const ch = r.tomorrow != null && r.v != null && Math.abs(r.tomorrow - r.v) > 0.001
+        ? ` <span class="${r.tomorrow > r.v ? 'down' : 'up'}" title="ราคาพรุ่งนี้">→ ${fmt(r.tomorrow)}</span>` : '';
+      return `<div>${esc(r.name)}${r.note ? `<div class="muted">${r.note}</div>` : ''}</div>
+        <div class="bar-track"><div class="bar" style="width:${(r.v / max) * 100}%;background:var(${r.color})"></div></div>
+        <div class="bar-val">${fmt(r.v)}${ch}</div>`;
+    }).join('')}</div>
+    <div class="explain">ราคาน้ำมันดิบคือต้นทุนวัตถุดิบก่อนกลั่น ส่วนต่างกับราคาหน้าปั๊มมาจากค่ากลั่น ภาษี กองทุนน้ำมัน และค่าการตลาด
+      ลูกศร → คือราคาที่ประกาศสำหรับพรุ่งนี้ (ถ้ามีการปรับ)</div>
+  </section>`;
+}
+
+function fxCard(fx) {
+  const r = fx.rates || {};
+  const tiles = [['USD', 'ดอลลาร์สหรัฐ'], ['EUR', 'ยูโร'], ['GBP', 'ปอนด์'], ['CNY', 'หยวน'], ['JPY100', '100 เยน']];
+  return `<section class="card span-5">
+    <div class="card-head"><h2>ค่าเงินบาท</h2><span class="muted">อัตราอ้างอิง ${esc(fx.date || '')}</span></div>
+    ${errBox(fx.status)}
+    <table><tr><th>สกุลเงิน</th><th>บาท</th></tr>
+      ${tiles.map(([k, n]) => `<tr><td>${n} (${k.replace('100', '')})</td><td>${fmt(r[k], k === 'CNY' ? 3 : 2)}</td></tr>`).join('')}
+    </table>
+    <div class="explain" style="margin-top:14px"><b>USD/THB ย้อนหลัง 1 ปี</b></div>
+    <div class="chart" id="fxChart"></div>
+  </section>`;
+}
+
+function stockCard(stocks) {
+  return `<section class="card span-7">
+    <div class="card-head"><h2>ตลาดหุ้น ไทยเทียบโลก</h2><span class="muted">Yahoo Finance · ดีเลย์</span></div>
+    ${stocks.map((s) => s.status?.ok ? errBox(s.status) : `<div class="err">${esc(s.name)}: ${esc(s.status?.error)}</div>`).join('')}
+    <table>
+      <tr><th>ดัชนี</th><th>ล่าสุด</th><th>1 วัน</th><th>1 เดือน</th><th>1 ปี</th><th>1 ปี (คิดเป็นบาท)</th></tr>
+      ${stocks.map((s, i) => s.price == null ? '' : `<tr>
+        <td><span class="chip" style="background:var(--series-${i + 1})"></span>${esc(s.name)}</td>
+        <td>${fmt(s.price)} <span class="muted">${esc(s.currency)}</span></td>
+        <td>${fmtPct(s.change1d)}</td><td>${fmtPct(s.change1m)}</td><td>${fmtPct(s.change1y)}</td><td>${fmtPct(s.change1yThb)}</td></tr>`).join('')}
+    </table>
+    <div class="explain" style="margin-top:14px"><b>ถ้าลงทุน 100 บาทเมื่อ 1 ปีก่อน ตอนนี้จะเหลือเท่าไร</b> (ดัชนีต่างประเทศรวมผลของค่าเงินบาทแล้ว)</div>
+    <div class="chart" id="stockChart"></div>
+  </section>`;
+}
+
+function inflationCard(inf) {
+  const th = inf.thailand?.at(-1), w = inf.world?.at(-1);
+  return `<section class="card span-12">
+    <div class="card-head"><h2>เงินเฟ้อ (รายปี)</h2><span class="muted">World Bank · อัปเดตปีละครั้ง</span></div>
+    ${errBox(inf.status)}
+    <div class="stats">
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย ปี ${esc(th?.date)}</div><div class="value">${fmt(th?.value)}%</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ค่าเฉลี่ยโลก ปี ${esc(w?.date)}</div><div class="value">${fmt(w?.value)}%</div></div>
+    </div>
+    <div class="chart" id="inflChart"></div>
+    <div class="explain">ตัวเลขเงินเฟ้อรายเดือนของไทยดูได้ที่ <a href="https://www.tpso.go.th" target="_blank" rel="noopener">สำนักงานนโยบายและยุทธศาสตร์การค้า (สนค.)</a>
+      ข้อมูล World Bank มาช้ากว่าประมาณหนึ่งปี แต่เทียบกับค่าเฉลี่ยโลกได้</div>
+  </section>`;
+}
+
+// ---------- โหลดข้อมูลและวาดหน้า ----------
+async function load() {
+  $('#refresh').disabled = true;
+  try {
+    const d = await (await fetch('data.json', { cache: 'no-store' })).json();
+    $('#banner').innerHTML = d.mock ? '<div class="banner">โหมดข้อมูลตัวอย่าง (MOCK) — ตัวเลขในหน้านี้เป็นของสมมติ ไม่ใช่ราคาจริง</div>' : '';
+    $('#updated').textContent = 'อัปเดต ' + new Date(d.generatedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    charts.length = 0;
+    $('#app').innerHTML =
+      `<div class="section-title span-12"><h2>สัญญาณทิศทาง: ราคาโลกเปลี่ยน → ราคาไทยน่าจะปรับตาม</h2>
+        <div class="sub">คำนวณจากราคาโลกที่แปลงเป็นบาทแล้ว ใช้ดูทิศทางเท่านั้น ไม่ใช่การพยากรณ์ที่แม่นยำ</div></div>` +
+      d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d).replace('span-12', 'span-6') +
+      `<div class="section-title span-12"><h2>ราคาปัจจุบัน ไทยเทียบโลก</h2></div>` +
+      goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) +
+      `<div class="card span-12 explain" style="margin:0">
+        <b>ข้อควรรู้เรื่องการประมาณ</b> ราคาน้ำมันไทยอิงราคาตลาดสิงคโปร์ (MOPS) ซึ่งไม่มีให้ใช้ฟรี เว็บนี้จึงใช้ราคาน้ำมันสำเร็จรูปตลาดนิวยอร์ก (RBOB, ULSD) ที่มักเคลื่อนไหวทิศทางเดียวกันแทน
+        ตัวเลขจึงบอกทิศทางและขนาดคร่าว ๆ ได้ แต่ไม่ตรงทุกสตางค์ ราคาดีเซลอาจถูกตรึงโดยกองทุนน้ำมันเชื้อเพลิง จึงอาจไม่ปรับตามตลาดโลก
+      </div>`;
+
+    for (const s of d.oil.signals) {
+      if (!s.ok) continue;
+      const series = [{ name: 'ราคาโลก (รวม VAT)', short: 'โลก', color: '--series-2', points: s.chart.world }];
+      if (s.chart.thai.length) series.unshift({ name: `ไทย: ${s.thaiName}`, short: 'ไทย', color: '--series-1', points: s.chart.thai });
+      lineChart($(`#oilChart-${s.key}`), series, { height: 190, zero: true, xLabel: thDate, format: (v) => sgn(v), label: `${s.title} ไทยเทียบโลก` });
+    }
+    if (d.gold.signal?.ok) {
+      const c = d.gold.signal.chart;
+      lineChart($('#goldChart'), [
+        { name: 'ไทย ขายออก', short: 'ไทย', color: '--series-1', points: c.map((p) => ({ date: p.t, value: p.thai })) },
+        { name: 'ราคาโลก แปลงเป็นบาท', short: 'โลก', color: '--series-2', points: c.map((p) => ({ date: p.t, value: p.world })) },
+      ], { height: 190, xLabel: thTime, format: (v) => fmt(v, 0), label: 'ทองไทยเทียบโลก 48 ชั่วโมง' });
+    }
+
+    if (d.fx.usdthbHistory) {
+      const pts = d.fx.usdthbHistory.slice(-260);
+      lineChart($('#fxChart'), [{ name: 'USD/THB', color: '--series-1', points: pts }], { height: 170, xLabel: thMonth, label: 'USD/THB 1 ปี' });
+    }
+    const idx = d.stocks.filter((s) => s.historyThb?.length);
+    if (idx.length) {
+      const cutoff = new Date(Date.now() - 365 * 864e5).toISOString().slice(0, 10);
+      const series = d.stocks.map((s, i) => {
+        if (!s.historyThb?.length) return null;
+        const h = s.historyThb.filter((p) => p.date >= cutoff);
+        const base = h[0]?.value;
+        return { name: s.name, short: s.name.split(' (')[0], color: `--series-${i + 1}`, points: h.map((p) => ({ date: p.date, value: (p.value / base) * 100 })) };
+      }).filter(Boolean);
+      lineChart($('#stockChart'), series, { height: 230, xLabel: thMonth, format: (v) => fmt(v, 0) + ' ฿', label: 'ผลตอบแทนดัชนีหุ้น 1 ปีในรูปเงินบาท' });
+    }
+    if (d.inflation.thailand) {
+      lineChart($('#inflChart'), [
+        { name: 'ไทย', color: '--series-1', points: d.inflation.thailand },
+        { name: 'ค่าเฉลี่ยโลก', color: '--series-2', points: d.inflation.world },
+      ], { height: 220, zero: true, format: (v) => fmt(v, 1) + '%', label: 'เงินเฟ้อไทยเทียบโลก' });
+    }
+  } catch (e) {
+    $('#app').innerHTML = `<div class="card span-12 err">โหลดข้อมูลไม่สำเร็จ: ${esc(e.message)}</div>`;
+  } finally { $('#refresh').disabled = false; }
+}
+$('#refresh').onclick = load;
+let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => charts.forEach((c) => c()), 150); });
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => charts.forEach((c) => c()));
+load();
+setInterval(load, 5 * 60 * 1000);
+</script>
+</body>
+</html>
