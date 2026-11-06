@@ -68,6 +68,13 @@
   .section-title { margin-top: 8px; }
   .acc { font-size: 13px; color: var(--text-secondary); margin-top: 10px; }
   .live { color: var(--good); font-size: 11px; font-weight: 500; }
+  table.sectors th, table.sectors td { white-space: nowrap; vertical-align: top; }
+  table.sectors td:first-child, table.sectors td:nth-child(2) { white-space: normal; min-width: 150px; }
+  table.sectors td:nth-child(2), table.sectors th:nth-child(2) { text-align: left; }
+  .vd { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid var(--border); }
+  .vd-up { color: var(--good); border-color: currentColor; } .vd-down { color: var(--critical); border-color: currentColor; }
+  .share { height: 4px; background: var(--grid); border-radius: 2px; margin-top: 4px; }
+  .share > div { height: 4px; background: var(--series-1); border-radius: 2px; }
   .tabs { display: flex; gap: 6px; margin-top: 14px; }
   .tab { border-radius: 999px; padding: 5px 14px; }
   .tab.on { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
@@ -465,6 +472,36 @@ function jobsCard(j) {
   </section>`;
 }
 
+function sectorsCard(sx) {
+  if (!sx?.sectors?.length) return '';
+  const qLabel = (d) => d ? `ไตรมาส ${d.slice(5)}/${+d.slice(0, 4) + 543 - 2500}` : '';
+  const money = (v) => v >= 1e9 ? `${fmt(v / 1e9, 1)} พันล้าน` : `${fmt(v / 1e6, 0)} ล้าน`;
+  const pc = (v) => v == null ? '–' : `<span class="${v >= 0 ? 'up' : 'down'}">${v >= 0 ? '+' : '−'}${fmt(Math.abs(v), 1)}%</span>`;
+  const verdict = (v) => v > 0 ? '<span class="vd vd-up">ไปได้สวย</span>' : v < 0 ? '<span class="vd vd-down">ซบเซา</span>' : '<span class="vd">ทรงตัว / ผสม</span>';
+  const rows = sx.sectors.filter((x) => x.ok).sort((a, b) => b.score - a.score || b.r3m - a.r3m);
+  const maxShare = Math.max(...rows.map((r) => r.valueShare || 0), 1);
+  return `<section class="card span-12">
+    <div class="card-head"><h2>กลุ่มธุรกิจไหนไปได้สวย กลุ่มไหนซบเซา</h2><span class="muted">หุ้นหลักของแต่ละกลุ่ม (Yahoo) · การจ้างงาน (ILO ${qLabel(sx.jobsQuarter)})</span></div>
+    <div class="explain" style="margin:0 0 10px">เงินซื้อขายหุ้นใน 12 กลุ่มนี้รวม <b>${money(sx.totalValuePerDay)} บาทต่อวัน</b> (เฉลี่ย 20 วันทำการล่าสุด)</div>
+    <div style="overflow-x:auto"><table class="sectors">
+      <tr><th>กลุ่ม</th><th>ภาพรวม</th><th>ราคาหุ้น 1 เดือน</th><th>3 เดือน</th><th>เงินซื้อขาย/วัน</th><th>เงินไหลเข้า-ออก</th><th>การจ้างงาน (ปีต่อปี)</th><th>6 เดือน</th></tr>
+      ${rows.map((r) => `<tr>
+        <td><b>${esc(r.name)}</b><div class="muted">${esc(r.stocks.join(' · '))}</div></td>
+        <td>${verdict(r.verdict)}<div class="muted">${esc(r.signals.join(' · ') || 'ไม่มีสัญญาณชัด')}</div></td>
+        <td>${pc(r.r1m)}</td><td>${pc(r.r3m)}</td>
+        <td>${money(r.valuePerDay)}<div class="share"><div style="width:${(r.valueShare / maxShare) * 100}%"></div></div><div class="muted">${fmt(r.valueShare, 1)}% ของทั้งหมด</div></td>
+        <td>${pc(r.flow)}</td>
+        <td>${r.jobs ? `${pc(r.jobs.pct)}<div class="muted">${r.jobs.change >= 0 ? '+' : '−'}${fmt(Math.abs(r.jobs.change), 0)} พันคน</div>` : '–'}</td>
+        <td style="width:110px"><div class="spark" data-spark="${esc(r.key)}"></div></td></tr>`).join('')}
+    </table></div>
+    <div class="explain"><b>อ่านอย่างไร:</b> "เงินไหลเข้า-ออก" คือมูลค่าซื้อขายเฉลี่ย 20 วันล่าสุดเทียบกับ 3 เดือนก่อนหน้า ถ้าเพิ่มขึ้นมาก แปลว่านักลงทุนสนใจกลุ่มนั้นมากขึ้น
+      "ภาพรวม" ให้คะแนนจาก 3 ด้าน คือ ราคาหุ้น 3 เดือน (เกิน ±5%), เงินไหลเข้า-ออก (เกิน ±20%) และการจ้างงานของภาคธุรกิจนั้น (เพิ่มเกิน 3% หรือลดลง)
+      ได้คะแนนตั้งแต่ +2 คือ "ไปได้สวย" ตั้งแต่ −2 คือ "ซบเซา"
+      ตลาดหุ้นสะท้อนบริษัทใหญ่และความคาดหวังของนักลงทุน ไม่ใช่ธุรกิจทั้งภาค ส่วนการจ้างงานเป็นข้อมูลรายไตรมาสจากการสำรวจ
+      GDP แยกรายสาขาของ สศช. เป็นตัวชี้ที่ดีกว่า แต่เว็บ สศช. มีระบบกันบอต จึงดึงอัตโนมัติไม่ได้ ไม่ใช่คำแนะนำการลงทุน</div>
+  </section>`;
+}
+
 // ---------- โหลดข้อมูลและวาดหน้า ----------
 async function load() {
   $('#refresh').disabled = true;
@@ -477,7 +514,7 @@ async function load() {
     $('#app').innerHTML =
       `<div class="section-title span-12"><h2>สัญญาณทิศทาง: ราคาโลกเปลี่ยน → ราคาไทยน่าจะปรับตาม</h2>
         <div class="sub">คำนวณจากราคาโลกที่แปลงเป็นบาทแล้ว ใช้ดูทิศทางเท่านั้น ไม่ใช่การพยากรณ์ที่แม่นยำ</div></div>` +
-      d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d) + newsCard(d.news) +
+      d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d) + sectorsCard(d.sectors) + newsCard(d.news) +
       `<div class="section-title span-12"><h2>ราคาปัจจุบัน ไทยเทียบโลก</h2></div>` +
       goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) + unemploymentCard(d.unemployment) + jobsCard(d.jobs) +
       `<div class="card span-12 explain" style="margin:0">
@@ -506,6 +543,14 @@ async function load() {
       lineChart($('#goldChart'), series, { height: 190, time: true, xLabel: (d) => new Date(d).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), format: (v) => fmt(v, 0), label: 'ทองไทยเทียบโลก วันนี้' });
     }
 
+    // กราฟเล็กรายกลุ่ม (ไม่มีแกน ใช้ดูทิศทาง)
+    document.querySelectorAll('[data-spark]').forEach((el) => {
+      const sec = d.sectors.sectors.find((x) => x.key === el.dataset.spark);
+      if (!sec?.spark?.length) return;
+      const v = sec.spark.map((p) => p.value), lo = Math.min(...v), hi = Math.max(...v), W = 110, H = 30;
+      const pts = v.map((y, i) => `${(i / (v.length - 1)) * W},${H - 2 - ((y - lo) / (hi - lo || 1)) * (H - 4)}`).join(' ');
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="ราคาเฉลี่ย 6 เดือน ${esc(sec.name)}"><title>6 เดือน: ${v.at(-1) >= 100 ? '+' : ''}${fmt(v.at(-1) - 100, 1)}%</title><polyline fill="none" stroke="${css(v.at(-1) >= v[0] ? '--series-1' : '--series-2')}" stroke-width="2" points="${pts}"/></svg>`;
+    });
     document.querySelectorAll('.tabs').forEach((tabs) => tabs.addEventListener('click', (ev) => {
       const b = ev.target.closest('.tab'); if (!b) return;
       const card = tabs.closest('.card');

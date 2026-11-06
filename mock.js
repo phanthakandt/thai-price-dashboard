@@ -183,3 +183,10 @@ export async function fetchJobsByGroup() {
   const total = (o) => qs.map((date, i) => ({ date, value: Object.values(o).reduce((a, s) => a + s[i].value, 0) }));
   return { occupation: { ...occ, TOTAL: total(occ) }, industry: { ...ind, TOTAL: total(ind) }, source: 'MOCK' };
 }
+
+export async function fetchStockDaily(symbol) {
+  let h = 0; for (const c of symbol) h = (h * 31 + c.charCodeAt(0)) % 9973;
+  const drift = ((h % 21) - 10) / 4000, volBase = 2e6 + (h % 50) * 1e5, flowTilt = ((h % 7) - 3) / 3;
+  const hist = walk(20 + (h % 200), 185, 0.03, drift).map((p, i, a) => ({ ...p, volume: Math.round(volBase * (1 + (i > a.length - 20 ? flowTilt * 0.5 : 0)) * (0.7 + rand() * 0.6)) }));
+  return { symbol, price: hist.at(-1).value, currency: 'THB', history: hist };
+}

@@ -119,8 +119,9 @@ async function yahooChart(symbol, query) {
   const r = j?.chart?.result?.[0];
   if (!r) throw new Error(`Yahoo ไม่มีข้อมูล ${symbol}`);
   const closes = r.indicators?.quote?.[0]?.close || [];
+  const vols = r.indicators?.quote?.[0]?.volume || [];
   const history = (r.timestamp || [])
-    .map((ts, i) => ({ date: isoDate(new Date(ts * 1000)), value: closes[i] }))
+    .map((ts, i) => ({ date: isoDate(new Date(ts * 1000)), value: closes[i], volume: vols[i] ?? null }))
     .filter((p) => p.value != null);
   return { meta: r.meta, history };
 }
@@ -341,4 +342,11 @@ export async function fetchJobsByGroup() {
   ]);
   if (!occ.TOTAL?.length && !ind.TOTAL?.length) throw new Error('ไม่พบข้อมูลคนทำงานแยกตามอาชีพของไทยจาก ILO');
   return { occupation: occ, industry: ind, source: 'ILOSTAT (สำรวจภาวะการทำงานของประชากร)' };
+}
+
+// ---------- 11) กลุ่มธุรกิจในตลาดหุ้นไทย: ราคาและมูลค่าซื้อขายของหุ้นหลักในแต่ละกลุ่ม (Yahoo, 6 เดือน) ----------
+export async function fetchStockDaily(symbol) {
+  const { meta, history } = await yahooChart(symbol, 'range=6mo&interval=1d');
+  if (history.length < 40) throw new Error(`ข้อมูล ${symbol} ไม่พอ`);
+  return { symbol, price: meta.regularMarketPrice, currency: meta.currency, history };
 }
