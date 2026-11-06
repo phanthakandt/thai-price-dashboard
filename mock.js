@@ -30,6 +30,7 @@ const Y = {
   '^SET.BK': [walk(1400, 370, 0.015, -0.0002), 'THB'],
   '^GSPC': [walk(5800, 370, 0.012, 0.0006), 'USD'],
   URTH: [walk(155, 370, 0.012, 0.0004), 'USD'],
+  'THB=X': [fxHist.map((p) => ({ ...p })), 'THB'],
 };
 // ทำให้ช่วง 3 วันล่าสุดราคาเบนซินโลกขึ้นแรง เพื่อให้เห็นสัญญาณ
 Y['RB=F'][0].slice(-3).forEach((p, i) => (p.value *= 1 + 0.025 * (i + 1)));
@@ -85,7 +86,18 @@ export async function fetchWorldGold() {
   return { usdPerOz: xau, updatedAt: new Date().toISOString(), source: 'MOCK' };
 }
 export async function fetchThaiGold() {
-  return { barBuy: thaiGoldNow - 100, barSell: thaiGoldNow, ornamentBuy: Math.round((thaiGoldNow - 100) * 0.98), ornamentSell: thaiGoldNow + 500, asOf: 'MOCK', source: 'MOCK' };
+  // ประกาศล่าสุดอิงราคาโลกเมื่อ 40 นาทีก่อน (ตอนนั้นราคาโลกต่ำกว่าตอนนี้)
+  const lastChangeIdx = goldHist.findLastIndex((g, i) => i > 0 && g.thaiSell !== goldHist[i - 1].thaiSell);
+  const refRow = goldHist[Math.min(goldHist.length - 5, Math.max(0, lastChangeIdx))];
+  const factor = (15.244 * 0.965) / 31.1034768;
+  const startToday = Date.now() - 30 * 3600e3;
+  const today = goldHist.filter((g, i) => g.t >= startToday && (i === 0 || g.thaiSell !== goldHist[i - 1].thaiSell))
+    .map((g) => ({ t: g.t, sell: g.thaiSell, spot: g.worldThb / (usdthb * factor), fx: usdthb }));
+  return {
+    barBuy: thaiGoldNow - 200, barSell: thaiGoldNow, ornamentBuy: Math.round((thaiGoldNow - 200) * 0.98), ornamentSell: thaiGoldNow + 800,
+    asOf: 'MOCK', asOfTime: refRow.t, refSpot: (refRow.worldThb - 100) / (usdthb * factor), refFx: usdthb, changeToday: -900,
+    today, source: 'MOCK',
+  };
 }
 export async function fetchThaiOil() {
   const others = [['แก๊สโซฮอล์ 91', -0.37], ['แก๊สโซฮอล์ E20', -2.21], ['แก๊สโซฮอล์ E85', -3.86], ['เบนซิน', 8.29]]

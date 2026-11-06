@@ -116,7 +116,10 @@ function drawLine(el, series, opt) {
   let lo = Math.min(...all.map((p) => p.value)), hi = Math.max(...all.map((p) => p.value));
   if (opt.zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
   const pad = (hi - lo) * 0.08 || 1; lo -= pad; hi += pad;
-  const x = (d) => m.l + (xi.get(d) / Math.max(1, dates.length - 1)) * (W - m.l - m.r);
+  const T = (d) => Date.parse(d), t0 = T(dates[0]), t1 = T(dates.at(-1));
+  const x = opt.time
+    ? (d) => m.l + ((T(d) - t0) / Math.max(1, t1 - t0)) * (W - m.l - m.r)
+    : (d) => m.l + (xi.get(d) / Math.max(1, dates.length - 1)) * (W - m.l - m.r);
   const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
   const f = opt.format || ((v) => fmt(v));
   // เส้นกริดแนวนอน
@@ -136,7 +139,10 @@ function drawLine(el, series, opt) {
     .sort((a, b) => a.y - b.y) : [];
   for (let i = 1; i < labels.length; i++) labels[i].y = Math.max(labels[i].y, labels[i - 1].y + 15);
   const paths = series.map((s) => {
-    const d = s.points.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.value).toFixed(1)}`).join('');
+    const d = s.points.map((p, i) => {
+      const X = x(p.date).toFixed(1), Y = y(p.value).toFixed(1);
+      return i === 0 ? `M${X},${Y}` : s.step ? `H${X}V${Y}` : `L${X},${Y}`;
+    }).join('');
     return `<path d="${d}" fill="none" stroke="${css(s.color)}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
   }).join('') + labels.map((l) => `<text x="${l.x}" y="${l.y}" font-size="12" fill="${css('--text-primary')}">${esc(l.s.short || l.s.name)}</text>`).join('');
   el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(opt.label || '')}">${grid}${xt}${paths}
@@ -146,12 +152,21 @@ function drawLine(el, series, opt) {
     <div class="tip"></div>` +
     (series.length > 1 ? `<div class="legend">${series.map((s) => `<span><span class="chip" style="background:var(${s.color})"></span>${esc(s.name)}</span>`).join('')}</div>` : '');
   const svg = el.querySelector('svg'), tip = el.querySelector('.tip'), xh = el.querySelector('.xh'), dots = el.querySelector('.dots');
-  const lookups = series.map((s) => new Map(s.points.map((p) => [p.date, p.value])));
+  // ค่าของแต่ละเส้น ณ จุดที่ชี้: ถ้าไม่มีจุดตรงวันนั้น ใช้ค่าล่าสุดก่อนหน้า (แบบขั้นบันได)
+  const lookups = series.map((s) => {
+    const exact = new Map(s.points.map((p) => [p.date, p.value]));
+    if (!opt.time) return exact;
+    const pts = s.points;
+    return { has: (d) => pts.length && T(pts[0].date) <= T(d),
+      get: (d) => { let v = null; for (const p of pts) { if (T(p.date) <= T(d)) v = p.value; else break; } return v; } };
+  });
   svg.addEventListener('pointermove', (ev) => {
     const r = svg.getBoundingClientRect();
     const px = (ev.clientX - r.left) * (W / r.width);
-    const i = Math.round(((px - m.l) / (W - m.l - m.r)) * (dates.length - 1));
-    const d = dates[Math.max(0, Math.min(dates.length - 1, i))];
+    const frac = Math.max(0, Math.min(1, (px - m.l) / (W - m.l - m.r)));
+    let d;
+    if (opt.time) { const tt = t0 + frac * (t1 - t0); d = dates.reduce((a, b) => Math.abs(T(b) - tt) < Math.abs(T(a) - tt) ? b : a); }
+    else d = dates[Math.round(frac * (dates.length - 1))];
     xh.setAttribute('x1', x(d)); xh.setAttribute('x2', x(d)); xh.style.display = '';
     dots.innerHTML = series.map((s, k) => lookups[k].has(d)
       ? `<circle cx="${x(d)}" cy="${y(lookups[k].get(d))}" r="4" fill="${css(s.color)}" stroke="${css('--surface-1')}" stroke-width="2"/>` : '').join('');
@@ -206,19 +221,23 @@ function signalOilCard(s) {
 
 function signalGoldCard(gold) {
   const s = gold.signal;
-  if (!s?.ok) return `<section class="card span-6"><h2>ทองคำ</h2>${errBox(gold.status.thai)}${errBox(gold.status.world)}
-    <div class="muted" style="margin-top:8px">กำลังเก็บประวัติราคา (มี ${s?.snaps ?? 0} จุด) สัญญาณจะแสดงหลังเก็บได้อย่างน้อย 2 จุด ระบบบันทึกทุก 2 นาที</div></section>`;
+  if (!s?.ok) return `<section class="card span-6"><h2>ทองคำแท่ง</h2>${errBox(gold.status.thai)}${errBox(gold.status.world)}
+    <div class="muted" style="margin-top:8px">ยังคำนวณสัญญาณไม่ได้ (${esc(s?.reason || '')})</div></section>`;
   const head = s.direction === 0
-    ? dirPill(0, `ราคาโลกยังเปลี่ยนไม่ถึง 50 บาท (${sgn(s.estimate, 0)} บาท)`)
+    ? dirPill(0, `ราคาโลกยังสอดคล้องกับราคาไทย (ต่าง ${sgn(s.estimate, 0)} บาท)`)
     : dirPill(s.direction, `ทองไทยมีแนวโน้ม${s.direction > 0 ? 'ขึ้น' : 'ลง'} ประมาณ ${fmt(Math.abs(s.estimateRounded), 0)} บาท`);
+  const ref = s.method === 'ref'
+    ? `ประกาศล่าสุด ${thTime(s.refTime)} อิง Gold Spot ${fmt(s.refSpot)} และ ${fmt(s.refFx)} บาท/USD<br>ตอนนี้ Gold Spot ${fmt(s.spotNow)} และ ${fmt(s.fxNow)} บาท/USD`
+    : 'คำนวณจากประวัติที่บันทึกไว้';
   return `<section class="card span-6">
-    <div class="card-head"><h2>ทองคำแท่ง</h2><span class="muted">สมาคมฯ ปรับราคาครั้งละ 50 บาท</span></div>
+    <div class="card-head"><h2>ทองคำแท่ง</h2><span class="muted">วันนี้สมาคมฯ ปรับราคาแล้ว ${s.adjustmentsToday} ครั้ง</span></div>
     ${head}
     <div class="stats" style="margin-top:14px">
-      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย ขายออก</div><div class="value">${fmt(s.thaiSell, 0)}</div><div class="note">บาท / ทอง 1 บาท</div></div>
-      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ราคาโลก แปลงเป็นบาท</div><div class="value">${fmt(gold.worldThbPerBaht, 0)}</div><div class="note">${s.sinceLabel} (${thTime(s.refTime)}) <b>${sgn(s.estimate, 0)}</b> บาท</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย ขายออก (ล่าสุด)</div><div class="value">${fmt(s.thaiSell, 0)}</div><div class="note">บาท / ทอง 1 บาท</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>ราคาที่ราคาโลกตอนนี้ชี้</div><div class="value">${fmt(s.implied, 0)}</div><div class="note">ต่างจากราคาไทย <b>${sgn(s.estimate, 0)}</b> บาท</div></div>
     </div>
-    <div class="explain" style="margin-top:12px"><b>48 ชั่วโมงล่าสุด (บาท / ทอง 1 บาท)</b> ทองไทยตามราคาโลกภายในไม่กี่นาทีถึงชั่วโมง</div>
+    <div class="explain" style="margin-top:8px">${ref}</div>
+    <div class="explain" style="margin-top:12px"><b>วันนี้ (บาท / ทอง 1 บาท)</b> เส้นฟ้าคือราคาที่สมาคมฯ ประกาศแต่ละครั้ง เส้นส้มคือราคาโลกที่ปรับฐานให้เทียบกันได้ ทองไทยตามราคาโลกภายในไม่กี่นาทีถึงชั่วโมง</div>
     <div class="chart" id="goldChart"></div>
   </section>`;
 }
@@ -226,7 +245,7 @@ function signalGoldCard(gold) {
 function signalMarketCard(d) {
   const by = Object.fromEntries(d.stocks.map((s) => [s.symbol, s]));
   const us = by['^GSPC'], w = by['URTH'], set = by['^SET.BK'];
-  const fx = d.fx.change1d;
+  const fx = d.fx.live?.change1d ?? d.fx.change1d;
   return `<section class="card span-12">
     <div class="card-head"><h2>ตลาดหุ้นและค่าเงิน</h2><span class="muted">ผลจากตลาดต่างประเทศเมื่อคืน</span></div>
     <div class="stats">
@@ -234,7 +253,7 @@ function signalMarketCard(d) {
         <div class="note">ตลาดสหรัฐปิดตอนเช้าตามเวลาไทย SET มักเปิดตามทิศทางนี้ แต่ไม่เสมอไป</div></div>
       <div class="stat"><div class="label">MSCI World</div><div class="value">${fmtPct(w?.change1d)}</div><div class="note">ภาพรวมหุ้นทั่วโลก</div></div>
       <div class="stat"><div class="label">SET ล่าสุด</div><div class="value">${fmtPct(set?.change1d)}</div><div class="note">${fmt(set?.price)} จุด</div></div>
-      <div class="stat"><div class="label">ค่าเงินบาท (USD/THB)</div><div class="value">${fmt(d.fx.rates?.USD)}</div>
+      <div class="stat"><div class="label">ค่าเงินบาท (USD/THB)</div><div class="value">${fmt(d.fx.live?.usdthb ?? d.fx.rates?.USD)}</div>
         <div class="note">${fx == null ? '' : `บาท${fx > 0 ? 'อ่อน' : 'แข็ง'}ค่า ${fmt(Math.abs(fx))}% จากวันก่อน ${fx > 0 ? 'ทำให้ราคาทองและน้ำมันในรูปบาทสูงขึ้น' : 'ทำให้ราคาทองและน้ำมันในรูปบาทถูกลง'}`}</div></div>
     </div>
   </section>`;
@@ -361,10 +380,10 @@ async function load() {
     }
     if (d.gold.signal?.ok) {
       const c = d.gold.signal.chart;
-      lineChart($('#goldChart'), [
-        { name: 'ไทย ขายออก', short: 'ไทย', color: '--series-1', points: c.map((p) => ({ date: p.t, value: p.thai })) },
-        { name: 'ราคาโลก แปลงเป็นบาท', short: 'โลก', color: '--series-2', points: c.map((p) => ({ date: p.t, value: p.world })) },
-      ], { height: 190, xLabel: thTime, format: (v) => fmt(v, 0), label: 'ทองไทยเทียบโลก 48 ชั่วโมง' });
+      const iso = (p) => ({ date: new Date(p.t).toISOString(), value: p.v });
+      const series = [{ name: 'ราคาโลก (ปรับฐานแล้ว)', short: 'โลก', color: '--series-2', points: c.world.map(iso) }];
+      if (c.thai.length) series.unshift({ name: 'ไทย ประกาศขายออก', short: 'ไทย', color: '--series-1', step: true, points: c.thai.map(iso) });
+      lineChart($('#goldChart'), series, { height: 190, time: true, xLabel: (d) => new Date(d).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), format: (v) => fmt(v, 0), label: 'ทองไทยเทียบโลก วันนี้' });
     }
 
     if (d.fx.usdthbHistory) {

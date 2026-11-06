@@ -67,22 +67,30 @@ export async function fetchWorldGold() {
   return { usdPerOz: price, updatedAt: j.updatedAt || null, source: 'gold-api.com (XAU/USD spot)' };
 }
 
-// ---------- 3) ทองไทย: หน้าเว็บสมาคมค้าทองคำ (ไม่มี API ทางการ จึงอ่านจาก HTML) ----------
+// ---------- 3) ทองไทย: API ที่หน้าเว็บสมาคมค้าทองคำใช้ (JSON) ----------
+// Details = รายการทุกครั้งที่ปรับราคาในวันนี้ พร้อมราคาทองโลก (goldSpot) และค่าเงิน (bahtPerUSD) ที่สมาคมฯ ใช้อ้างอิง
+const bkkTime = (s) => (s ? new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : s + '+07:00').getTime() : null);
 export async function fetchThaiGold() {
-  const html = await getText('https://www.goldtraders.or.th/');
-  const pick = (suffix) => {
-    const m = html.match(new RegExp(`id="[^"]*${suffix}"[^>]*>([^<]+)<`, 'i'));
-    return m ? toNum(m[1]) : null;
+  const parse = (j) => (typeof j === 'string' ? JSON.parse(j) : j);
+  let rows = [];
+  try { rows = parse(await getJSON('https://www.goldtraders.or.th/api/GoldPrices/Details?readjson=false')); } catch { /* ใช้ Latest แทน */ }
+  if (!Array.isArray(rows) || !rows.length) rows = [parse(await getJSON('https://www.goldtraders.or.th/api/GoldPrices/Latest?readjson=false'))];
+  const last = rows.at(-1);
+  const barSell = toNum(last?.bL_SellPrice);
+  if (!barSell) throw new Error('ไม่พบราคาทองในผลลัพธ์ของสมาคมค้าทองคำ');
+  return {
+    barBuy: toNum(last.bL_BuyPrice),
+    barSell,
+    ornamentBuy: toNum(last.oM965_BuyPrice),
+    ornamentSell: toNum(last.oM965_SellPrice),
+    asOf: last.asTime ? `${last.asTime.slice(11, 16)} น. (ครั้งที่ ${last.seq})` : null,
+    asOfTime: bkkTime(last.asTime),
+    refSpot: toNum(last.goldSpot),        // ราคาทองโลกที่สมาคมฯ ใช้ตอนประกาศ (USD/ออนซ์)
+    refFx: toNum(last.bahtPerUSD),        // ค่าเงินบาทที่สมาคมฯ ใช้ตอนประกาศ
+    changeToday: toNum(last.priceChangeFromPrevDayLast),
+    today: rows.map((r) => ({ t: bkkTime(r.asTime), sell: toNum(r.bL_SellPrice), spot: toNum(r.goldSpot), fx: toNum(r.bahtPerUSD) })),
+    source: 'สมาคมค้าทองคำ (goldtraders.or.th)',
   };
-  const out = {
-    barBuy: pick('lblBLBuy'),
-    barSell: pick('lblBLSell'),
-    ornamentBuy: pick('lblOMBuy'),
-    ornamentSell: pick('lblOMSell'),
-  };
-  if (!out.barSell) throw new Error('อ่านราคาจากหน้าเว็บสมาคมค้าทองคำไม่ได้ (หน้าเว็บอาจเปลี่ยนรูปแบบ)');
-  const t = html.match(/id="[^"]*lblAsTime"[^>]*>([^<]+)</i);
-  return { ...out, asOf: t ? t[1].trim() : null, source: 'สมาคมค้าทองคำ (goldtraders.or.th)' };
 }
 
 // ---------- 4) น้ำมันไทย: API ราคาน้ำมันของบางจาก (สาธารณะ) ----------
