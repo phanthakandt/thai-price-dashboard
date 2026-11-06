@@ -313,35 +313,40 @@ export const INDUSTRIES = {
   Q: 'สุขภาพและสังคมสงเคราะห์', R: 'ศิลปะ บันเทิง นันทนาการ', S: 'บริการอื่น ๆ', T: 'ลูกจ้างในครัวเรือน', U: 'องค์การระหว่างประเทศ',
 };
 
-async function iloSeries(id, prefix) {
-  const from = new Date().getUTCFullYear() - 3;
+// อ่านข้อมูล ILO หนึ่งชุด แล้วแยกตามกลุ่ม (classif1) ที่ขึ้นต้นด้วย prefix ที่ระบุ
+async function iloSeries(id, prefixes) {
+  const from = new Date().getUTCFullYear() - 4;
   const url = `https://rplumber.ilo.org/data/indicator/?id=${id}&ref_area=THA&sex=SEX_T&timefrom=${from}&format=.csv`;
   const res = await fetch(url, { headers: { 'User-Agent': UA }, signal: AbortSignal.timeout(60000) });
   if (!res.ok) throw new Error(`HTTP ${res.status} จาก rplumber.ilo.org`);
   const lines = (await res.text()).trim().split('\n');
   const head = lines.shift().split(',').map((h) => h.replace(/"/g, ''));
   const ix = (k) => head.indexOf(k);
-  const out = {}, seen = new Set();
+  const out = Object.fromEntries(prefixes.map((p) => [p, {}])), seen = new Set();
   for (const l of lines) {
     const c = l.split(',').map((x) => x.replace(/"/g, ''));
     const cls = c[ix('classif1')];
-    if (!cls.startsWith(prefix)) continue;
+    const prefix = prefixes.find((p) => cls.startsWith(p));
+    if (!prefix) continue;
     const key = cls.slice(prefix.length), date = c[ix('time')], v = toNum(c[ix('obs_value')]);
-    if (v == null || seen.has(key + date)) continue;
-    seen.add(key + date);
-    (out[key] ??= []).push({ date, value: v });
+    if (v == null || seen.has(cls + date)) continue;
+    seen.add(cls + date);
+    (out[prefix][key] ??= []).push({ date, value: v });
   }
-  for (const k in out) out[k].sort((a, b) => a.date.localeCompare(b.date));
+  for (const p of prefixes) for (const k in out[p]) out[p][k].sort((a, b) => a.date.localeCompare(b.date));
   return out;
 }
 
+export const SKILLS = { 'L3-4': 'ทักษะสูง (ผู้บริหาร วิชาชีพ ช่างเทคนิค)', L2: 'ทักษะกลาง (สำนักงาน บริการ เกษตร ช่าง คุมเครื่องจักร)', L1: 'ทักษะพื้นฐาน (แรงงานทั่วไป)' };
+
 export async function fetchJobsByGroup() {
   const [occ, ind] = await Promise.all([
-    iloSeries('EMP_TEMP_SEX_OCU_NB_Q', 'OCU_ISCO08_'),
-    iloSeries('EMP_TEMP_SEX_ECO_NB_Q', 'ECO_ISIC4_'),
+    iloSeries('EMP_TEMP_SEX_OCU_NB_Q', ['OCU_ISCO08_', 'OCU_SKILL_']),
+    iloSeries('EMP_TEMP_SEX_ECO_NB_Q', ['ECO_ISIC4_']),
   ]);
-  if (!occ.TOTAL?.length && !ind.TOTAL?.length) throw new Error('ไม่พบข้อมูลคนทำงานแยกตามอาชีพของไทยจาก ILO');
-  return { occupation: occ, industry: ind, source: 'ILOSTAT (สำรวจภาวะการทำงานของประชากร)' };
+  const occupation = occ.OCU_ISCO08_, skill = occ.OCU_SKILL_, industry = ind.ECO_ISIC4_;
+  if (!occupation.TOTAL?.length && !industry.TOTAL?.length) throw new Error('ไม่พบข้อมูลคนทำงานแยกตามอาชีพของไทยจาก ILO');
+  return { occupation, industry, skill, source: 'ILOSTAT (สำรวจภาวะการทำงานของประชากร)' };
 }
 
 // ---------- 11) กลุ่มธุรกิจในตลาดหุ้นไทย: ราคาและมูลค่าซื้อขายของหุ้นหลักในแต่ละกลุ่ม (Yahoo, 6 เดือน) ----------

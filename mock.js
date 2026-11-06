@@ -174,14 +174,15 @@ export async function fetchUnemploymentQuarterly() {
     USA: q([4.0, 3.6, 3.6, 3.4, 3.8, 3.5, 3.8, 3.6, 4.1, 4.1, 4.2, 4.0, 4.4, 4.1, 4.3, 4.3, 4.6]),
   }, source: 'MOCK' };
 }
-export { OCCUPATIONS, INDUSTRIES } from './sources.js';
+export { OCCUPATIONS, INDUSTRIES, SKILLS } from './sources.js';
 export async function fetchJobsByGroup() {
   const qs = []; for (let y = 2023; y <= 2026; y++) for (let q = 1; q <= 4; q++) if (!(y === 2026 && q > 1)) qs.push(`${y}Q${q}`);
   const mk = (base, drift) => qs.map((date, i) => ({ date, value: +(base * (1 + drift * i + (rand() - 0.5) * 0.02)).toFixed(1) }));
   const occ = { 1: mk(1300, 0.004), 2: mk(2300, 0.006), 3: mk(1800, 0.002), 4: mk(1850, -0.004), 5: mk(9200, 0.003), 6: mk(9600, -0.006), 7: mk(4400, -0.002), 8: mk(4600, -0.003), 9: mk(5600, 0.001) };
   const ind = { A: mk(11000, -0.005), C: mk(6450, -0.003), F: mk(2350, -0.004), G: mk(6900, 0.002), I: mk(3100, 0.008), K: mk(520, 0.003), O: mk(1840, 0), P: mk(1150, 0.001), Q: mk(870, 0.006) };
   const total = (o) => qs.map((date, i) => ({ date, value: Object.values(o).reduce((a, s) => a + s[i].value, 0) }));
-  return { occupation: { ...occ, TOTAL: total(occ) }, industry: { ...ind, TOTAL: total(ind) }, source: 'MOCK' };
+  const skill = { 'L3-4': mk(5400, 0.003), L2: mk(29500, 0.002), L1: mk(5600, 0.001) };
+  return { occupation: { ...occ, TOTAL: total(occ) }, industry: { ...ind, TOTAL: total(ind) }, skill: { ...skill, TOTAL: total(skill) }, source: 'MOCK' };
 }
 
 export async function fetchStockDaily(symbol) {

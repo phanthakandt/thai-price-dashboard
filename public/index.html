@@ -75,6 +75,16 @@
   .vd-up { color: var(--good); border-color: currentColor; } .vd-down { color: var(--critical); border-color: currentColor; }
   .share { height: 4px; background: var(--grid); border-radius: 2px; margin-top: 4px; }
   .share > div { height: 4px; background: var(--series-1); border-radius: 2px; }
+  .insight { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; margin: 4px 0 12px; }
+  .insight-h { font-weight: 600; font-size: 13px; margin-bottom: 4px; }
+  .insight ul, .summary ul { margin: 0; padding-left: 18px; font-size: 14px; }
+  .insight li { margin: 3px 0; }
+  .summary ul { list-style: none; padding: 0; }
+  .summary li { padding: 7px 0; border-bottom: 1px solid var(--grid); display: flex; gap: 10px; align-items: baseline; }
+  .summary li:last-child { border-bottom: 0; }
+  .summary .tag { flex: 0 0 88px; font-size: 12px; color: var(--text-secondary); font-weight: 600; }
+  .summary .si { font-size: 11px; color: var(--text-muted); width: 12px; }
+  .badge { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--grid); color: var(--text-secondary); margin-top: 2px; }
   .tabs { display: flex; gap: 6px; margin-top: 14px; }
   .tab { border-radius: 999px; padding: 5px 14px; }
   .tab.on { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
@@ -438,37 +448,51 @@ function unemploymentCard(u) {
   </section>`;
 }
 
+function insightBox(lines, title = 'อ่านว่าอย่างไร') {
+  if (!lines?.length) return '';
+  return `<div class="insight"><div class="insight-h">${esc(title)}</div><ul>${lines.map((l) => `<li>${esc(l)}</li>`).join('')}</ul></div>`;
+}
+
 function jobsCard(j) {
   if (!j || (!j.occupation && !j.industry)) return j?.status && !j.status.ok ? `<section class="card span-12"><h2>คนทำงานแยกตามอาชีพ</h2>${errBox(j.status)}</section>` : '';
   const qLabel = (d) => d ? `ไตรมาส ${d.slice(5)}/${+d.slice(0, 4) + 543 - 2500}` : '';
-  const k = (v) => v == null ? '–' : fmt(v * 1000 / 1e6, 2) + ' ล้าน';   // พันคน -> ล้านคน
-  const kc = (v) => v == null ? '–' : `${v > 0 ? '+' : v < 0 ? '−' : ''}${fmt(Math.abs(v), 0)} พัน`;
-  const tbl = (t, id) => {
+  const k = (v) => v == null ? '–' : fmt(v / 1000, 2) + ' ล้าน';   // พันคน -> ล้านคน
+  const pc = (v, d = 1) => v == null ? '–' : `${v >= 0 ? '+' : '−'}${fmt(Math.abs(v), d)}%`;
+  const tbl = (t) => {
     if (!t) return '<div class="muted">ไม่มีข้อมูล</div>';
-    const rows = [...t.rows].sort((a, b) => (b.change ?? -1e9) - (a.change ?? -1e9));
-    const max = Math.max(...rows.map((r) => Math.abs(r.change || 0)), 1);
-    return `<table class="jobs"><tr><th>กลุ่ม</th><th>คนทำงาน</th><th>สัดส่วน</th><th colspan="2">เทียบ${qLabel(t.prevYear)}</th></tr>
+    const rows = [...t.rows].sort((a, b) => (b.rel ?? -1e9) - (a.rel ?? -1e9));
+    const max = Math.max(...rows.map((r) => Math.abs(r.rel || 0)), 1);
+    return `<table class="jobs"><tr><th>กลุ่ม</th><th>คนทำงาน</th><th>สัดส่วน</th><th>เทียบปีก่อน</th><th colspan="2">เทียบภาพรวม (${pc(t.totalPct)})</th></tr>
       ${rows.map((r) => {
-        const w = r.change == null ? 0 : (Math.abs(r.change) / max) * 50;
-        const bar = r.change == null ? '' : `<div class="dbar"><div style="${r.change >= 0 ? `left:50%;width:${w}%;background:var(--series-1)` : `right:50%;width:${w}%;background:var(--series-2)`}"></div></div>`;
-        return `<tr><td>${esc(r.name)}</td><td>${k(r.now)}</td><td>${fmt(r.share, 1)}%</td>
-          <td>${kc(r.change)} <span class="muted">${r.changePct == null ? '' : `(${r.changePct >= 0 ? '+' : ''}${fmt(r.changePct, 1)}%)`}</span></td><td style="width:22%">${bar}</td></tr>`;
+        const w = r.rel == null ? 0 : (Math.abs(r.rel) / max) * 50;
+        const bar = r.rel == null ? '' : `<div class="dbar"><div style="${r.rel >= 0 ? `left:50%;width:${w}%;background:var(--series-1)` : `right:50%;width:${w}%;background:var(--series-2)`}"></div></div>`;
+        const streak = Math.abs(r.streak) >= 2 ? `<span class="badge">${r.streak > 0 ? 'โตกว่า' : 'ช้ากว่า'}ต่อเนื่อง ${Math.abs(r.streak)} ไตรมาส</span>` : '';
+        const small = r.now < 300 ? ' <span class="muted" title="กลุ่มเล็ก ค่าจากการสำรวจแกว่งได้มาก">*</span>' : '';
+        return `<tr><td>${esc(r.name)}${small}</td><td>${k(r.now)}</td><td>${fmt(r.share, 1)}%</td>
+          <td>${pc(r.changePct)}</td><td>${r.rel == null ? '–' : `${r.rel >= 0 ? '+' : '−'}${fmt(Math.abs(r.rel), 1)} จุด`}${streak ? '<br>' + streak : ''}</td><td style="width:20%">${bar}</td></tr>`;
       }).join('')}</table>`;
   };
   const t = j.occupation || j.industry;
   return `<section class="card span-12">
-    <div class="card-head"><h2>คนทำงานแยกตามอาชีพและภาคธุรกิจ</h2><span class="muted">${qLabel(t.quarter)} · ILOSTAT · หน่วย พันคน</span></div>
+    <div class="card-head"><h2>คนทำงานแยกตามอาชีพและภาคธุรกิจ</h2><span class="muted">${qLabel(t.quarter)} เทียบ${qLabel(t.prevYear)} · ILOSTAT</span></div>
     ${errBox(j.status)}
-    <div class="stats"><div class="stat"><div class="label">คนมีงานทำทั้งหมด ${qLabel(t.quarter)}</div><div class="value">${k(t.total)} คน</div>
-      <div class="note">${t.totalChange == null || isNaN(t.totalChange) ? '' : `${t.totalChange >= 0 ? 'เพิ่มขึ้น' : 'ลดลง'} ${fmt(Math.abs(t.totalChange), 0)} พันคน จาก${qLabel(t.prevYear)}`}</div></div></div>
+    ${insightBox(j.insights)}
     <div class="tabs" role="tablist">
-      <button class="tab on" data-t="occ">ตามอาชีพ (9 กลุ่ม)</button><button class="tab" data-t="ind">ตามภาคธุรกิจ</button></div>
-    <div class="legend" style="margin:6px 0"><span><span class="chip" style="background:var(--series-1)"></span>คนทำงานเพิ่มขึ้น</span><span><span class="chip" style="background:var(--series-2)"></span>คนทำงานลดลง</span></div>
-    <div data-p="occ">${tbl(j.occupation)}</div><div data-p="ind" hidden>${tbl(j.industry)}</div>
-    <div class="explain">เรียงจากกลุ่มที่คนทำงานเพิ่มขึ้นมากที่สุด เทียบกับไตรมาสเดียวกันของปีก่อน (ข้อมูลไม่ได้ปรับฤดูกาล)
-      กลุ่มที่คนทำงานลดลงต่อเนื่องเป็นสัญญาณว่างานกลุ่มนั้นหดตัว แต่ไม่ได้แปลว่าคนเหล่านั้นตกงานทั้งหมด เพราะอาจย้ายไปทำงานกลุ่มอื่น
-      ตัวเลขมาจากการสำรวจตัวอย่าง กลุ่มเล็กจึงคลาดเคลื่อนได้มาก (ตัดกลุ่มที่มีคนทำงานต่ำกว่า 3 หมื่นคนออก)
-      ข้อมูลคนว่างงานแยกตามอาชีพเดิมไม่มีใน API ฟรี ดูได้จากรายงานของสำนักงานสถิติแห่งชาติ</div>
+      <button class="tab on" data-t="occ">ตามอาชีพ</button><button class="tab" data-t="ind">ตามภาคธุรกิจ</button>${j.skill ? '<button class="tab" data-t="skill">ตามระดับทักษะ</button>' : ''}</div>
+    <div class="legend" style="margin:6px 0"><span><span class="chip" style="background:var(--series-1)"></span>โตเร็วกว่าภาพรวม</span><span><span class="chip" style="background:var(--series-2)"></span>โตช้ากว่าภาพรวมหรือหดตัว</span></div>
+    <div data-p="occ">${tbl(j.occupation)}</div><div data-p="ind" hidden>${tbl(j.industry)}</div>${j.skill ? `<div data-p="skill" hidden>${tbl(j.skill)}</div>` : ''}
+    <div class="explain">"เทียบภาพรวม" = การเติบโตของกลุ่มนั้น ลบด้วยการเติบโตของคนทำงานทั้งประเทศ เพื่อตัดผลที่ทุกกลุ่มเพิ่มหรือลดพร้อมกัน (เช่น การปรับวิธีสำรวจ)
+      "ต่อเนื่อง N ไตรมาส" = โตเร็วหรือช้ากว่าภาพรวมติดกันหลายไตรมาส เป็นแนวโน้มที่เชื่อถือได้มากกว่าการเปลี่ยนแค่ครั้งเดียว
+      * = กลุ่มที่มีคนทำงานไม่ถึง 3 แสนคน ตัวเลขแกว่งได้มาก ข้อมูลไม่ได้ปรับฤดูกาลจึงเทียบกับไตรมาสเดียวกันของปีก่อน</div>
+  </section>`;
+}
+
+function summaryCard(items) {
+  if (!items?.length) return '';
+  const icon = (it) => it.dir > 0 ? '▲' : it.dir < 0 ? '▼' : '●';
+  return `<section class="card span-12 summary">
+    <div class="card-head"><h2>สรุปวันนี้</h2><span class="muted">สร้างอัตโนมัติจากตัวเลขในหน้านี้ · ใช้ดูภาพรวม ไม่ใช่คำแนะนำการลงทุน</span></div>
+    <ul>${items.map((it) => `<li><span class="tag">${esc(it.tag)}</span><span class="si">${icon(it)}</span>${esc(it.text)}</li>`).join('')}</ul>
   </section>`;
 }
 
@@ -482,6 +506,7 @@ function sectorsCard(sx) {
   const maxShare = Math.max(...rows.map((r) => r.valueShare || 0), 1);
   return `<section class="card span-12">
     <div class="card-head"><h2>กลุ่มธุรกิจไหนไปได้สวย กลุ่มไหนซบเซา</h2><span class="muted">หุ้นหลักของแต่ละกลุ่ม (Yahoo) · การจ้างงาน (ILO ${qLabel(sx.jobsQuarter)})</span></div>
+    ${insightBox(sx.insights)}
     <div class="explain" style="margin:0 0 10px">เงินซื้อขายหุ้นใน 12 กลุ่มนี้รวม <b>${money(sx.totalValuePerDay)} บาทต่อวัน</b> (เฉลี่ย 20 วันทำการล่าสุด)</div>
     <div style="overflow-x:auto"><table class="sectors">
       <tr><th>กลุ่ม</th><th>ภาพรวม</th><th>ราคาหุ้น 1 เดือน</th><th>3 เดือน</th><th>เงินซื้อขาย/วัน</th><th>เงินไหลเข้า-ออก</th><th>การจ้างงาน (ปีต่อปี)</th><th>6 เดือน</th></tr>
@@ -511,7 +536,7 @@ async function load() {
     $('#banner').innerHTML = d.mock ? '<div class="banner">โหมดข้อมูลตัวอย่าง (MOCK) — ตัวเลขในหน้านี้เป็นของสมมติ ไม่ใช่ราคาจริง</div>' : '';
     $('#updated').textContent = 'อัปเดต ' + new Date(d.generatedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     charts.length = 0;
-    $('#app').innerHTML =
+    $('#app').innerHTML = summaryCard(d.summary) +
       `<div class="section-title span-12"><h2>สัญญาณทิศทาง: ราคาโลกเปลี่ยน → ราคาไทยน่าจะปรับตาม</h2>
         <div class="sub">คำนวณจากราคาโลกที่แปลงเป็นบาทแล้ว ใช้ดูทิศทางเท่านั้น ไม่ใช่การพยากรณ์ที่แม่นยำ</div></div>` +
       d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d) + sectorsCard(d.sectors) + newsCard(d.news) +
