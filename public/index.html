@@ -206,7 +206,7 @@ function oilAcc(bt) {
   return `<div class="acc"><b>ทดสอบย้อนหลัง ${bt.days} วัน (ตั้งแต่ ${thDate(bt.from)}):</b> ราคาไทยปรับ ${bt.changes} ครั้ง
     (ขึ้น ${bt.ups} ลง ${bt.downs} เฉลี่ยครั้งละ ${fmt(bt.avgStep)} บาท)
     ${bt.n ? `· ครั้งที่มีแรงกดดันชัดเจน ทิศทางตรงกัน <b>${fmt(bt.hitRate * 100, 0)}%</b> (${bt.hit}/${bt.n})` : ''}
-    ${bt.strong ? `· เมื่อแรงกดดันเกิน 1 บาท ราคาปรับตามภายใน 2 วัน <b>${fmt(bt.followRate * 100, 0)}%</b> ของวัน` : ''}</div>`;
+    ${bt.strong ? `· แต่ช่วงเวลาบอกได้ยาก: วันที่แรงกดดันเกิน 1 บาท ราคาปรับตามภายใน 2 วันเพียง ${fmt(bt.followRate * 100, 0)}%` : ''}</div>`;
 }
 
 function signalOilCard(s) {
@@ -215,7 +215,7 @@ function signalOilCard(s) {
     ? dirPill(Math.sign(s.announced), `ประกาศแล้ว: พรุ่งนี้ ${s.announced > 0 ? 'ขึ้น' : 'ลง'} ${fmt(Math.abs(s.announced))} บาท/ลิตร`)
     : s.direction === 0
       ? dirPill(0, `แรงกดดันยังน้อย (${sgn(s.estimate)} บาท/ลิตร)`)
-      : dirPill(s.direction, `ถ้าปรับ น่าจะเป็นขา${s.direction > 0 ? 'ขึ้น' : 'ลง'} · แรงกดดันสะสม ${sgn(s.estimate)} บาท/ลิตร`);
+      : dirPill(s.direction, `ถ้าปรับ น่าจะเป็นขา${s.direction > 0 ? 'ขึ้น' : 'ลง'} · แรงกดดัน ${sgn(s.estimate)} บาท/ลิตร`);
   const m = s.model, st = s.structure;
   const fundTxt = (f) => f == null ? '–' : f < 0 ? `อุดหนุน ${fmt(-f)}` : `เก็บเข้า ${fmt(f)}`;
   const why = s.method === 'eppo' ? `<table style="margin-top:10px">
@@ -224,8 +224,9 @@ function signalOilCard(s) {
       <tr><td>ราคาเนื้อน้ำมันล่าสุด (สนพ. ${thDate(m.eppoDate)})</td><td>${fmt(m.exrNow)}</td></tr>` :
       `<tr><td>ไทยปรับราคาหลังวันที่ของไฟล์ สนพ. (${thDate(m.base.date)}) นับจากราคาโลกตั้งแต่วันนั้น</td><td></td></tr>`}
       <tr><td>ตลาดโลกขยับหลังวันที่ของไฟล์ สนพ. (ประมาณจากนิวยอร์ก)</td><td>${sgn(m.dExr)}</td></tr>
-      <tr><td><b>แรงกดดันสะสม (รวม VAT)</b></td><td><b>${sgn(s.estimate)}</b></td></tr>
-      <tr><td>กองทุนน้ำมันตอนนี้${m.fundAtBase != null ? ` (ตอนปรับครั้งล่าสุด ${fundTxt(m.fundAtBase)})` : ''}</td><td>${fundTxt(m.fund)}</td></tr></table>`
+      <tr><td>① ต้นทุนเปลี่ยนตั้งแต่ปรับราคาครั้งล่าสุด (รวม VAT)</td><td>${sgn(m.cost)}</td></tr>
+      <tr><td>② ภาระกองทุนน้ำมันตอนนี้ (${fundTxt(m.fundEst)} บาท/ลิตร, รวม VAT)</td><td>${sgn(m.fundLoad)}</td></tr>
+      <tr><td><b>แรงกดดันรวม ① + ②</b></td><td><b>${sgn(s.estimate)}</b></td></tr></table>`
     : `<div class="explain">ยังไม่มีข้อมูล สนพ. จึงประมาณจากการเปลี่ยนแปลงของราคาโลกตั้งแต่ไทยปรับครั้งล่าสุด</div>`;
   const struct = st ? `<div class="explain" style="margin-top:12px"><b>ราคา ${fmt(st.retail)} บาท มาจาก</b>
       ราคาเนื้อน้ำมัน ${fmt(st.exr)} · ภาษี ${fmt(st.tax)} · กองทุนน้ำมัน ${sgn(st.fund)} · ค่าการตลาด ${fmt(st.mm)} · VAT และอื่น ๆ ${fmt(st.other)}</div>` : '';
@@ -413,7 +414,7 @@ async function load() {
       goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) +
       `<div class="card span-12 explain" style="margin:0">
         <b>ข้อควรรู้เรื่องการประมาณ</b> ข้อมูล สนพ. แสดงว่าค่าการตลาดของไทยแทบคงที่ เมื่อราคาเนื้อน้ำมัน (อิงตลาดสิงคโปร์) ขยับ กองทุนน้ำมันจะรับส่วนต่างไว้ก่อน
-        แล้วราคาขายปลีกจะถูกปรับเป็นขั้นเมื่อแรงกดดันสะสมพอ เว็บนี้จึงบอก "ทิศทางที่น่าจะปรับ" ได้ดีกว่า "วันที่จะปรับ"
+        แล้วราคาขายปลีกจะถูกปรับเป็นขั้นเมื่อแรงกดดันสะสมพอ แรงกดดันคิดจากต้นทุนที่เปลี่ยนไปตั้งแต่ปรับครั้งล่าสุด รวมกับภาระที่กองทุนอุดหนุนอยู่ เว็บนี้จึงบอก "ทิศทางที่น่าจะปรับ" ได้ดีกว่า "วันที่จะปรับ"
         การขยับของตลาดโลกหลังวันที่ของไฟล์ สนพ. ประมาณจากตลาดนิวยอร์ก (RBOB, ULSD) ดีเซลขึ้นกับนโยบายกองทุนน้ำมันมาก จึงคาดการณ์ได้ยากกว่า
         ตัวเลข "ทดสอบย้อนหลัง" ในแต่ละการ์ดบอกว่าเชื่อได้แค่ไหน
       </div>`;

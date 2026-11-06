@@ -140,7 +140,7 @@ export async function fetchEppo(date) {
     const prev = new Date(new Date(date).getTime() - 864e5).toISOString().slice(0, 10);
     const exr = (at(Y[sym][0], prev) * at(fxHist, prev)) / 3.785;
     const retail = [...oilHist].reverse().find((r) => r.date <= date)?.prices[name] ?? thaiStart[name][0];
-    eppoFund[k] ??= retail / 1.07 - exr - tax - 2.4; // ให้ค่าการตลาดเริ่มที่ ~2.4
+    eppoFund[k] ??= fund; // กองทุนสมมติ (ค่าการตลาดจะแกว่งแทน)
     const mm = retail / 1.07 - exr - tax - eppoFund[k];
     products[k] = { name: k, exr, discount: 0, excise: tax / 1.1, fund: eppoFund[k], ws: exr + tax + eppoFund[k], mm, retail };
   }
