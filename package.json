@@ -1,0 +1,11 @@
+{
+  "name": "thai-price-dashboard",
+  "version": "0.1.0",
+  "description": "รวมราคา ทอง น้ำมัน ค่าเงิน หุ้น เงินเฟ้อ เทียบไทยกับโลกเป็นเงินบาท",
+  "type": "module",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.js",
+    "mock": "MOCK=1 node server.js"
+  }
+}
