@@ -101,6 +101,36 @@
     border: 1px solid var(--border); background: var(--bg); }
   .pill-icon { font-size: 13px; }
   .p-up .pill-icon { color: var(--good); } .p-down .pill-icon { color: var(--critical); } .p-flat .pill-icon { color: var(--text-muted); }
+  .nw { white-space: nowrap; }
+  .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+  @media (max-width: 600px) {
+    .wrap { padding: 16px 10px 40px; }
+    .card { padding: 14px 12px; border-radius: 12px; }
+    .grid { gap: 12px; }
+    h1 { font-size: 22px; }
+    .stat .value { font-size: 20px; }
+    .stats { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+    table { font-size: 13px; }
+    th, td { padding: 6px 4px; white-space: normal; }
+    .hide-sm { display: none; }
+    .card-head { flex-wrap: wrap; }
+    .pill { font-size: 14px; padding: 7px 10px; }
+    .summary .tag { flex-basis: 62px; }
+    .summary li { gap: 6px; }
+    .bars { grid-template-columns: minmax(90px, auto) 1fr auto; }
+    .badge { white-space: nowrap; font-size: 10px; padding: 0 5px; }
+    table.jobs td:not(:first-child), table.jobs th:not(:first-child) { white-space: nowrap; }
+    table.jobs td:first-child { min-width: 110px; }
+    .pill { align-items: flex-start; }
+    /* ตารางกลุ่มธุรกิจบนมือถือ: แสดงเป็นการ์ดทีละกลุ่ม */
+    table.sectors, table.sectors tbody { display: block; }
+    table.sectors tr:first-child { display: none; }
+    table.sectors tr { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; padding: 12px 0; border-bottom: 1px solid var(--grid); }
+    table.sectors td { display: block; border: 0; padding: 0; text-align: left; white-space: normal; min-width: 0 !important; width: auto !important; }
+    table.sectors td:first-child, table.sectors td:nth-child(2) { grid-column: 1 / -1; }
+    table.sectors td:nth-child(2) { margin-bottom: 4px; }
+    table.sectors td[data-l]:not([data-l=""])::before { content: attr(data-l); display: block; font-size: 11px; color: var(--text-muted); }
+  }
   footer { margin-top: 24px; color: var(--text-muted); font-size: 12px; }
   footer a { color: var(--text-secondary); }
 </style>
@@ -232,7 +262,9 @@ const thTime = (t) => new Date(t).toLocaleString('th-TH', { day: 'numeric', mont
 function dirPill(dir, text, cost = false) {
   const icon = dir > 0 ? '▲' : dir < 0 ? '▼' : '●';
   const cls = dir === 0 ? 'p-flat' : (dir > 0) !== cost ? 'p-up' : 'p-down';
-  return `<div class="pill ${cls}"><span class="pill-icon">${icon}</span>${text}</div>`;
+  // ไม่ให้หน่วยถูกตัดขึ้นบรรทัดใหม่กลางคำ (เช่น "บาท/ ลิตร")
+  const t = text.replace(/(<span[^>]*>[^<]*<\/span>|[^\s<]+)?\s?(บาท\/ลิตร|บาท)(?=[\s)]|$)/g, (m) => `<span class="nw">${m}</span>`);
+  return `<div class="pill ${cls}"><span class="pill-icon">${icon}</span><span>${t}</span></div>`;
 }
 
 function oilAcc(bt) {
@@ -405,11 +437,11 @@ function stockCard(stocks) {
     <div class="card-head"><h2>ตลาดหุ้น ไทยเทียบโลก</h2><span class="muted">Yahoo Finance · ดีเลย์</span></div>
     ${stocks.map((s) => s.status?.ok ? errBox(s.status) : `<div class="err">${esc(s.name)}: ${esc(s.status?.error)}</div>`).join('')}
     <table>
-      <tr><th>ดัชนี</th><th>ล่าสุด</th><th>1 วัน</th><th>1 เดือน</th><th>1 ปี</th><th>1 ปี (คิดเป็นบาท)</th></tr>
+      <tr><th>ดัชนี</th><th>ล่าสุด</th><th>1 วัน</th><th class="hide-sm">1 เดือน</th><th>1 ปี</th><th>1 ปี (เป็นบาท)</th></tr>
       ${stocks.map((s, i) => s.price == null ? '' : `<tr>
         <td><span class="chip" style="background:var(--series-${i + 1})"></span>${esc(s.name)}</td>
         <td>${fmt(s.price)} <span class="muted">${esc(s.currency)}</span></td>
-        <td>${fmtPct(s.change1d)}</td><td>${fmtPct(s.change1m)}</td><td>${fmtPct(s.change1y)}</td><td>${fmtPct(s.change1yThb)}</td></tr>`).join('')}
+        <td>${fmtPct(s.change1d)}</td><td class="hide-sm">${fmtPct(s.change1m)}</td><td>${fmtPct(s.change1y)}</td><td>${fmtPct(s.change1yThb)}</td></tr>`).join('')}
     </table>
     <div class="explain" style="margin-top:14px"><b>ถ้าลงทุน 100 บาทเมื่อ 1 ปีก่อน ตอนนี้จะเหลือเท่าไร</b> (ดัชนีต่างประเทศรวมผลของค่าเงินบาทแล้ว)</div>
     <div class="chart" id="stockChart"></div>
@@ -472,14 +504,14 @@ function jobsCard(j) {
     if (!t) return '<div class="muted">ไม่มีข้อมูล</div>';
     const rows = [...t.rows].sort((a, b) => (b.rel ?? -1e9) - (a.rel ?? -1e9));
     const max = Math.max(...rows.map((r) => Math.abs(r.rel || 0)), 1);
-    return `<table class="jobs"><tr><th>กลุ่ม</th><th>คนทำงาน</th><th>สัดส่วน</th><th>เทียบปีก่อน</th><th colspan="2">เทียบภาพรวม (${t.totalPct == null ? '–' : (t.totalPct >= 0 ? '+' : '−') + fmt(Math.abs(t.totalPct), 1) + '%'})</th></tr>
+    return `<table class="jobs"><tr><th>กลุ่ม</th><th>คนทำงาน</th><th class="hide-sm">สัดส่วน</th><th>เทียบปีก่อน</th><th colspan="2">เทียบภาพรวม (${t.totalPct == null ? '–' : (t.totalPct >= 0 ? '+' : '−') + fmt(Math.abs(t.totalPct), 1) + '%'})</th></tr>
       ${rows.map((r) => {
         const w = r.rel == null ? 0 : (Math.abs(r.rel) / max) * 50;
         const bar = r.rel == null ? '' : `<div class="dbar"><div style="${r.rel >= 0 ? `left:50%;width:${w}%;background:var(--series-1)` : `right:50%;width:${w}%;background:var(--series-2)`}"></div></div>`;
-        const streak = Math.abs(r.streak) >= 2 ? `<span class="badge">${r.streak > 0 ? 'โตกว่า' : 'ช้ากว่า'}ต่อเนื่อง ${Math.abs(r.streak)} ไตรมาส</span>` : '';
+        const streak = Math.abs(r.streak) >= 2 ? `<span class="badge" title="${r.streak > 0 ? 'โตเร็วกว่า' : 'โตช้ากว่า'}ภาพรวมติดกัน ${Math.abs(r.streak)} ไตรมาส">ต่อเนื่อง ${Math.abs(r.streak)} ไตรมาส</span>` : '';
         const small = r.now < 300 ? ' <span class="muted" title="กลุ่มเล็ก ค่าจากการสำรวจแกว่งได้มาก">*</span>' : '';
-        return `<tr><td>${esc(r.name)}${small}</td><td>${k(r.now)}</td><td>${fmt(r.share, 1)}%</td>
-          <td>${pc(r.changePct)}</td><td>${r.rel == null ? '–' : `<span class="${r.rel > 0 ? 'up' : r.rel < 0 ? 'down' : ''}">${r.rel >= 0 ? '+' : '−'}${fmt(Math.abs(r.rel), 1)} จุด</span>`}${streak ? '<br>' + streak : ''}</td><td style="width:20%">${bar}</td></tr>`;
+        return `<tr><td>${esc(r.name)}${small}</td><td>${k(r.now)}</td><td class="hide-sm">${fmt(r.share, 1)}%</td>
+          <td>${pc(r.changePct)}</td><td>${r.rel == null ? '–' : `<span class="${r.rel > 0 ? 'up' : r.rel < 0 ? 'down' : ''}">${r.rel >= 0 ? '+' : '−'}${fmt(Math.abs(r.rel), 1)} จุด</span>`}${streak ? '<br>' + streak : ''}</td><td class="hide-sm" style="width:20%">${bar}</td></tr>`;
       }).join('')}</table>`;
   };
   const t = j.occupation || j.industry;
@@ -492,7 +524,7 @@ function jobsCard(j) {
     <div class="legend" style="margin:6px 0"><span><span class="chip" style="background:var(--series-1)"></span>โตเร็วกว่าภาพรวม</span><span><span class="chip" style="background:var(--series-2)"></span>โตช้ากว่าภาพรวมหรือหดตัว</span></div>
     <div data-p="occ">${tbl(j.occupation)}</div><div data-p="ind" hidden>${tbl(j.industry)}</div>${j.skill ? `<div data-p="skill" hidden>${tbl(j.skill)}</div>` : ''}
     <div class="explain">"เทียบภาพรวม" = การเติบโตของกลุ่มนั้น ลบด้วยการเติบโตของคนทำงานทั้งประเทศ เพื่อตัดผลที่ทุกกลุ่มเพิ่มหรือลดพร้อมกัน (เช่น การปรับวิธีสำรวจ)
-      "ต่อเนื่อง N ไตรมาส" = โตเร็วหรือช้ากว่าภาพรวมติดกันหลายไตรมาส เป็นแนวโน้มที่เชื่อถือได้มากกว่าการเปลี่ยนแค่ครั้งเดียว
+      "ต่อเนื่อง N ไตรมาส" = โตเร็วกว่า (ตัวเลขสีเขียว) หรือช้ากว่า (สีแดง) ภาพรวมติดกันหลายไตรมาส เป็นแนวโน้มที่เชื่อถือได้มากกว่าการเปลี่ยนแค่ครั้งเดียว
       * = กลุ่มที่มีคนทำงานไม่ถึง 3 แสนคน ตัวเลขแกว่งได้มาก ข้อมูลไม่ได้ปรับฤดูกาลจึงเทียบกับไตรมาสเดียวกันของปีก่อน</div>
   </section>`;
 }
@@ -521,13 +553,13 @@ function sectorsCard(sx) {
     <div style="overflow-x:auto"><table class="sectors">
       <tr><th>กลุ่ม</th><th>ภาพรวม</th><th>ราคาหุ้น 1 เดือน</th><th>3 เดือน</th><th>เงินซื้อขาย/วัน</th><th>เงินไหลเข้า-ออก</th><th>การจ้างงาน (ปีต่อปี)</th><th>6 เดือน</th></tr>
       ${rows.map((r) => `<tr>
-        <td><b>${esc(r.name)}</b><div class="muted">${esc(r.stocks.join(' · '))}</div></td>
-        <td>${verdict(r.verdict)}<div class="muted">${esc(r.signals.join(' · ') || 'ไม่มีสัญญาณชัด')}</div></td>
-        <td>${pc(r.r1m)}</td><td>${pc(r.r3m)}</td>
-        <td>${money(r.valuePerDay)}<div class="share"><div style="width:${(r.valueShare / maxShare) * 100}%"></div></div><div class="muted">${fmt(r.valueShare, 1)}% ของทั้งหมด</div></td>
-        <td>${pc(r.flow)}</td>
-        <td>${r.jobs ? `${pc(r.jobs.pct)}<div class="muted">${r.jobs.rel >= 0 ? 'มากกว่า' : 'น้อยกว่า'}ภาพรวม ${fmt(Math.abs(r.jobs.rel), 1)} จุด</div>` : '–'}</td>
-        <td style="width:110px"><div class="spark" data-spark="${esc(r.key)}"></div></td></tr>`).join('')}
+        <td data-l=""><b>${esc(r.name)}</b><div class="muted">${esc(r.stocks.join(' · '))}</div></td>
+        <td data-l="">${verdict(r.verdict)}<div class="muted">${esc(r.signals.join(' · ') || 'ไม่มีสัญญาณชัด')}</div></td>
+        <td data-l="ราคาหุ้น 1 เดือน">${pc(r.r1m)}</td><td data-l="3 เดือน">${pc(r.r3m)}</td>
+        <td data-l="เงินซื้อขาย/วัน">${money(r.valuePerDay)}<div class="share"><div style="width:${(r.valueShare / maxShare) * 100}%"></div></div><div class="muted">${fmt(r.valueShare, 1)}% ของทั้งหมด</div></td>
+        <td data-l="เงินไหลเข้า-ออก">${pc(r.flow)}</td>
+        <td data-l="การจ้างงาน">${r.jobs ? `${pc(r.jobs.pct)}<div class="muted">${r.jobs.rel >= 0 ? 'มากกว่า' : 'น้อยกว่า'}ภาพรวม ${fmt(Math.abs(r.jobs.rel), 1)} จุด</div>` : '–'}</td>
+        <td data-l="6 เดือน" style="width:110px"><div class="spark" data-spark="${esc(r.key)}"></div></td></tr>`).join('')}
     </table></div>
     <div class="explain"><b>อ่านอย่างไร:</b> "เงินไหลเข้า-ออก" คือมูลค่าซื้อขายเฉลี่ย 20 วันล่าสุดเทียบกับ 3 เดือนก่อนหน้า ถ้าเพิ่มขึ้นมาก แปลว่านักลงทุนสนใจกลุ่มนั้นมากขึ้น
       "ภาพรวม" ให้คะแนนจาก 3 ด้าน คือ ราคาหุ้น 3 เดือน (เกิน ±5%), เงินไหลเข้า-ออก (เกิน ±20%) และการจ้างงานของภาคธุรกิจนั้นเทียบกับการจ้างงานรวมทั้งประเทศ (ต่างกันเกิน ±3 จุด)
@@ -578,6 +610,12 @@ async function load() {
       lineChart($('#goldChart'), series, { height: 190, time: true, xLabel: (d) => new Date(d).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), format: (v) => fmt(v, 0), label: 'ทองไทยเทียบโลก วันนี้' });
     }
 
+    // ตารางกว้างเลื่อนซ้าย-ขวาได้ภายในการ์ด ไม่ทำให้ทั้งหน้ากว้างเกินจอมือถือ
+    document.querySelectorAll('#app table').forEach((t) => {
+      if (t.parentElement.classList.contains('tbl-wrap') || t.parentElement.style.overflowX) return;
+      const w = document.createElement('div'); w.className = 'tbl-wrap';
+      t.replaceWith(w); w.appendChild(t);
+    });
     // กราฟเล็กรายกลุ่ม (ไม่มีแกน ใช้ดูทิศทาง)
     document.querySelectorAll('[data-spark]').forEach((el) => {
       const sec = d.sectors.sectors.find((x) => x.key === el.dataset.spark);
