@@ -102,6 +102,8 @@
   .pill-icon { font-size: 13px; }
   .p-up .pill-icon { color: var(--good); } .p-down .pill-icon { color: var(--critical); } .p-flat .pill-icon { color: var(--text-muted); }
   .nw { white-space: nowrap; }
+  .fc-oil-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .fc-oil-h { margin-bottom: 6px; }
   .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
   @media (max-width: 600px) {
     .wrap { padding: 16px 10px 40px; }
@@ -170,7 +172,8 @@ function lineChart(el, series, opt = {}) {
 function drawLine(el, series, opt) {
   const W = el.clientWidth || 600, H = opt.height || 240;
   const m = { t: 10, r: series.length > 1 ? 96 : 16, b: 26, l: 48 };
-  const all = series.flatMap((s) => s.points);
+  const bandPts = (opt.bands || []).flatMap((b) => b.points.flatMap((p) => [{ date: p.date, value: p.lo }, { date: p.date, value: p.hi }]));
+  const all = series.flatMap((s) => s.points).concat(bandPts);
   if (!all.length) { el.innerHTML = '<div class="muted">ไม่มีข้อมูล</div>'; return; }
   const dates = [...new Set(all.map((p) => p.date))].sort();
   const xi = new Map(dates.map((d, i) => [d, i]));
@@ -199,7 +202,13 @@ function drawLine(el, series, opt) {
     .map((s) => ({ s, x: x(s.points.at(-1).date) + 6, y: y(s.points.at(-1).value) + 4 }))
     .sort((a, b) => a.y - b.y) : [];
   for (let i = 1; i < labels.length; i++) labels[i].y = Math.max(labels[i].y, labels[i - 1].y + 15);
-  const paths = series.map((s) => {
+  // แถบช่วงคาดการณ์ (วาดก่อนเส้น)
+  const bandSvg = (opt.bands || []).map((b) => {
+    const up = b.points.map((p) => `${x(p.date).toFixed(1)},${y(p.hi).toFixed(1)}`);
+    const dn = [...b.points].reverse().map((p) => `${x(p.date).toFixed(1)},${y(p.lo).toFixed(1)}`);
+    return `<polygon points="${up.concat(dn).join(' ')}" fill="${css(b.color)}" fill-opacity="${b.opacity}" stroke="none"/>`;
+  }).join('');
+  const paths = bandSvg + series.map((s) => {
     const d = s.points.map((p, i) => {
       const X = x(p.date).toFixed(1), Y = y(p.value).toFixed(1);
       return i === 0 ? `M${X},${Y}` : s.step ? `H${X}V${Y}` : `L${X},${Y}`;
@@ -211,7 +220,7 @@ function drawLine(el, series, opt) {
     <g class="dots"></g>
     <rect x="${m.l}" y="0" width="${W - m.l - m.r}" height="${H}" fill="transparent"/></svg>
     <div class="tip"></div>` +
-    (series.length > 1 ? `<div class="legend">${series.map((s) => `<span><span class="chip" style="background:var(${s.color})"></span>${esc(s.name)}</span>`).join('')}</div>` : '');
+    (series.length > 1 || opt.bands?.length ? `<div class="legend">${series.map((s) => `<span><span class="chip" style="background:var(${s.color})"></span>${esc(s.name)}</span>`).join('')}${(opt.bands || []).map((b) => `<span><span class="chip" style="background:var(${b.color});opacity:${Math.min(1, b.opacity * 2.5)}"></span>${esc(b.name)}</span>`).join('')}</div>` : '');
   const svg = el.querySelector('svg'), tip = el.querySelector('.tip'), xh = el.querySelector('.xh'), dots = el.querySelector('.dots');
   // ค่าของแต่ละเส้น ณ จุดที่ชี้: ถ้าไม่มีจุดตรงวันนั้น ใช้ค่าล่าสุดก่อนหน้า (แบบขั้นบันได)
   const lookups = series.map((s) => {
@@ -231,7 +240,8 @@ function drawLine(el, series, opt) {
     xh.setAttribute('x1', x(d)); xh.setAttribute('x2', x(d)); xh.style.display = '';
     dots.innerHTML = series.map((s, k) => lookups[k].has(d)
       ? `<circle cx="${x(d)}" cy="${y(lookups[k].get(d))}" r="4" fill="${css(s.color)}" stroke="${css('--surface-1')}" stroke-width="2"/>` : '').join('');
-    tip.innerHTML = `<div class="muted">${opt.xLabel ? opt.xLabel(d) : d}</div>` + series.map((s, k) => lookups[k].has(d)
+    const bandTip = (opt.bands || []).map((b) => { const p = b.points.find((q) => q.date === d); return p ? `<div><span class="chip" style="background:var(${b.color});opacity:${b.opacity * 2}"></span>${esc(b.name)} <b>${f(p.lo)} – ${f(p.hi)}</b></div>` : ''; }).join('');
+    tip.innerHTML = `<div class="muted">${opt.xLabel ? opt.xLabel(d) : d}</div>` + bandTip + series.map((s, k) => lookups[k].has(d)
       ? `<div><span class="chip" style="background:var(${s.color})"></span>${esc(s.short || s.name)} <b>${f(lookups[k].get(d))}</b></div>` : '').join('');
     tip.style.display = 'block';
     const left = (x(d) / W) * r.width;
@@ -529,6 +539,46 @@ function jobsCard(j) {
   </section>`;
 }
 
+function forecastSection(f) {
+  if (!f) return '';
+  const oil = (f.oil || []).map((x) => {
+    const pct = (v) => v == null ? '–' : `${Math.round(v * 100)}%`;
+    const few = x.n && x.n < 15 ? ' (ข้อมูลในอดีตยังน้อย)' : '';
+    const head = x.announced != null
+      ? dirPill(Math.sign(x.announced), `ประกาศแล้ว: พรุ่งนี้${x.announced > 0 ? 'ขึ้น' : 'ลง'} ${fmt(Math.abs(x.announced))} บาท/ลิตร`, true)
+      : x.dir ? dirPill(x.dir, `ถ้าปรับ น่าจะเป็นขา${x.dir > 0 ? 'ขึ้น' : 'ลง'} · โอกาสปรับภายใน 7 วัน ~${pct(x.pChange)}${few}`, true)
+      : dirPill(0, `แรงกดดันน้อย · โอกาสปรับภายใน 7 วัน ~${pct(x.pChange)}${few}`, true);
+    return `<div class="fc-oil"><div class="fc-oil-h"><b>${esc(x.title)}</b> <span class="muted">ตอนนี้ ${fmt(x.thaiNow)} บาท/ลิตร</span></div>${head}
+      <div class="explain" style="margin-top:6px">${x.n ? `จาก ${x.n} วันในอดีตที่แรงกดดันระดับเดียวกับตอนนี้ (${{ strong: 'เกิน 1 บาท', medium: '0.3–1 บาท', weak: 'ต่ำกว่า 0.3 บาท' }[x.bucket]}) ราคาปรับภายใน 7 วัน ${pct(x.pChange)} ของครั้ง${x.dir && x.pChange ? ` และในครั้งที่ปรับ เป็นทางเดียวกับแรงกดดัน ${pct(x.pSameDir / x.pChange)}` : ''}` : 'ยังมีข้อมูลในอดีตไม่พอ'}
+      ${x.expectedPrice ? `· ถ้าปรับ น่าจะอยู่ราว <b>${fmt(x.expectedPrice)}</b> บาท (ขั้นเฉลี่ย ${fmt(x.step)} บาท)` : ''}</div></div>`;
+  }).join('');
+  const ranges = (f.ranges || []).map((r) => {
+    const d = r.decimals, F = (v) => fmt(v, d);
+    const bt = r.backtest?.n ? `ทดสอบย้อนหลัง ${r.backtest.n} ครั้ง: ราคาจริงอยู่ในช่วง 68% <b>${Math.round(r.backtest.cover68 * 100)}%</b> และในช่วง 95% <b>${Math.round(r.backtest.cover95 * 100)}%</b> ของครั้ง` : '';
+    const tr = r.tracking?.n ? ` · บันทึกจริงตั้งแต่เปิดเว็บ ${r.tracking.n} ครั้ง: อยู่ในช่วง 68% ${Math.round(r.tracking.cover68 * 100)}%` : r.tracking ? ` · เริ่มบันทึกผลจริงแล้ว (รอครบกำหนด ${r.tracking.pending} รายการ)` : '';
+    return `<section class="card span-6">
+      <div class="card-head"><h2>${esc(r.label)}</h2><span class="muted">ตอนนี้ ${F(r.now)} ${esc(r.unit)}</span></div>
+      <table><tr><th>ช่วงเวลา</th><th>ช่วงที่น่าจะเป็น (โอกาส ~68%)</th><th class="hide-sm">โอกาส ~95%</th></tr>
+        ${r.horizons.map((h) => `<tr><td>${h.days === 1 ? 'พรุ่งนี้' : h.days + ' วัน'}</td><td><b>${F(h.lo68)} – ${F(h.hi68)}</b></td><td class="hide-sm">${F(h.lo95)} – ${F(h.hi95)}</td></tr>`).join('')}</table>
+      <div class="chart" id="fc-${esc(r.key)}"></div>
+      <div class="acc">${bt}${tr}</div>
+    </section>`;
+  }).join('');
+  const imf = f.imf;
+  const imfCard = imf?.rows ? `<section class="card span-12">
+    <div class="card-head"><h2>ประมาณการเศรษฐกิจของ IMF</h2><span class="muted">World Economic Outlook · ตัวเลขตั้งแต่ปี ${esc(imf.projectedFrom)} เป็นการคาดการณ์</span></div>
+    <table><tr><th>ตัวชี้</th>${imf.years.map((y) => `<th>${y >= imf.projectedFrom ? `<span class="badge">คาดการณ์</span><br>` : ''}${+y + 543}</th>`).join('')}</tr>
+      ${imf.rows.map((r) => `<tr><td>${esc(r.name)} <span class="muted">ไทย</span></td>${r.th.map((v) => `<td><b>${v == null ? '–' : fmt(v, 1)}</b></td>`).join('')}</tr>
+        ${r.world.some((v) => v != null) ? `<tr><td class="muted">${esc(r.name)} โลก</td>${r.world.map((v) => `<td class="muted">${v == null ? '–' : fmt(v, 1)}</td>`).join('')}</tr>` : ''}`).join('')}
+    </table>
+    <div class="explain">IMF ปรับตัวเลขคาดการณ์ปีละ 2 ครั้ง (เมษายนและตุลาคม) เป็นการคาดการณ์ของเจ้าหน้าที่ IMF ไม่ใช่การรับประกัน ใช้ดูทิศทางของเศรษฐกิจไทยเทียบโลก</div>
+  </section>` : (imf?.status && !imf.status.ok ? `<section class="card span-12"><h2>ประมาณการเศรษฐกิจของ IMF</h2>${errBox(imf.status)}</section>` : '');
+  return `<div class="section-title span-12"><h2>มองไปข้างหน้า: คาดการณ์</h2>
+      <div class="sub">ทุกตัวเลขบอกความแม่นย้อนหลังไว้ด้วย ช่วงราคาไม่ได้เดาทิศทาง แต่บอกว่าราคาน่าจะแกว่งอยู่ในกรอบไหน</div></div>
+    ${oil ? `<section class="card span-12"><div class="card-head"><h2>น้ำมันหน้าปั๊ม 7 วันข้างหน้า</h2><span class="muted">สถิติจากข้อมูล สนพ.</span></div><div class="fc-oil-grid">${oil}</div></section>` : ''}
+    ${ranges}${imfCard}`;
+}
+
 function summaryCard(items) {
   if (!items?.length) return '';
   const icon = (it) => it.dir > 0 ? '▲' : it.dir < 0 ? '▼' : '●';
@@ -582,6 +632,7 @@ async function load() {
       `<div class="section-title span-12"><h2>สัญญาณทิศทาง: ราคาโลกเปลี่ยน → ราคาไทยน่าจะปรับตาม</h2>
         <div class="sub">คำนวณจากราคาโลกที่แปลงเป็นบาทแล้ว ใช้ดูทิศทางเท่านั้น ไม่ใช่การพยากรณ์ที่แม่นยำ</div></div>` +
       d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d) + sectorsCard(d.sectors) + newsCard(d.news) +
+      forecastSection(d.forecast) +
       `<div class="section-title span-12"><h2>ราคาปัจจุบัน ไทยเทียบโลก</h2></div>` +
       goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) + unemploymentCard(d.unemployment) + jobsCard(d.jobs) +
       `<div class="card span-12 explain" style="margin:0">
@@ -610,6 +661,16 @@ async function load() {
       lineChart($('#goldChart'), series, { height: 190, time: true, xLabel: (d) => new Date(d).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }), format: (v) => fmt(v, 0), label: 'ทองไทยเทียบโลก วันนี้' });
     }
 
+    for (const r of d.forecast?.ranges || []) {
+      const el = $(`#fc-${r.key}`); if (!el) continue;
+      const cone = r.chart.cone;
+      lineChart(el, [{ name: 'ราคาจริง', short: '', color: '--series-1', points: r.chart.history }], {
+        height: 170, time: true, xLabel: thDate, format: (v) => fmt(v, r.decimals),
+        bands: [
+          { name: 'ช่วง 95%', color: '--series-2', opacity: 0.12, points: cone.map((p) => ({ date: p.date, lo: p.lo95, hi: p.hi95 })) },
+          { name: 'ช่วง 68%', color: '--series-2', opacity: 0.28, points: cone.map((p) => ({ date: p.date, lo: p.lo68, hi: p.hi68 })) },
+        ], label: `ช่วงคาดการณ์ ${r.label}` });
+    }
     // ตารางกว้างเลื่อนซ้าย-ขวาได้ภายในการ์ด ไม่ทำให้ทั้งหน้ากว้างเกินจอมือถือ
     document.querySelectorAll('#app table').forEach((t) => {
       if (t.parentElement.classList.contains('tbl-wrap') || t.parentElement.style.overflowX) return;

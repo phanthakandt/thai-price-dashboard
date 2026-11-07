@@ -32,6 +32,7 @@ const Y = {
   URTH: [walk(155, 370, 0.012, 0.0004), 'USD'],
   'THB=X': [fxHist.map((p) => ({ ...p })), 'THB'],
   'ES=F': [walk(5850, 370, 0.012, 0.0006), 'USD'],
+  'GC=F': [walk(3300, 370, 0.018, 0.0008), 'USD'],
   'NQ=F': [walk(20500, 370, 0.015, 0.0007), 'USD'],
   '^N225': [walk(38000, 370, 0.013, 0.0004), 'JPY'],
   '^HSI': [walk(20000, 370, 0.015, 0.0002), 'HKD'],
@@ -190,4 +191,13 @@ export async function fetchStockDaily(symbol) {
   const drift = ((h % 21) - 10) / 4000, volBase = 2e6 + (h % 50) * 1e5, flowTilt = ((h % 7) - 3) / 3;
   const hist = walk(20 + (h % 200), 185, 0.03, drift).map((p, i, a) => ({ ...p, volume: Math.round(volBase * (1 + (i > a.length - 20 ? flowTilt * 0.5 : 0)) * (0.7 + rand() * 0.6)) }));
   return { symbol, price: hist.at(-1).value, currency: 'THB', history: hist };
+}
+export { IMF_INDICATORS } from './sources.js';
+export async function fetchImfOutlook() {
+  const yrs = (o) => Object.fromEntries(Object.entries(o).map(([y, v]) => [y, v]));
+  return { data: {
+    NGDP_RPCH: { THA: yrs({ 2023: 2.0, 2024: 2.5, 2025: 2.4, 2026: 1.5, 2027: 2.1, 2028: 2.3 }), WLD: yrs({ 2023: 3.3, 2024: 3.3, 2025: 3.2, 2026: 3.0, 2027: 3.1, 2028: 3.2 }) },
+    PCPIPCH: { THA: yrs({ 2023: 1.2, 2024: 0.4, 2025: 0.2, 2026: 0.6, 2027: 1.0, 2028: 1.5 }), WLD: yrs({ 2023: 6.7, 2024: 5.7, 2025: 4.2, 2026: 3.6, 2027: 3.3, 2028: 3.2 }) },
+    LUR: { THA: yrs({ 2023: 1.0, 2024: 1.0, 2025: 0.9, 2026: 1.0, 2027: 1.0, 2028: 1.0 }), WLD: {} },
+  }, source: 'MOCK' };
 }

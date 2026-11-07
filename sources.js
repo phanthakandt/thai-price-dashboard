@@ -355,3 +355,20 @@ export async function fetchStockDaily(symbol) {
   if (history.length < 40) throw new Error(`ข้อมูล ${symbol} ไม่พอ`);
   return { symbol, price: meta.regularMarketPrice, currency: meta.currency, history };
 }
+
+// ---------- 12) ประมาณการเศรษฐกิจของ IMF (World Economic Outlook) ----------
+export const IMF_INDICATORS = {
+  NGDP_RPCH: 'GDP เติบโต (%)',
+  PCPIPCH: 'เงินเฟ้อ (%)',
+  LUR: 'อัตราการว่างงาน (%)',
+};
+export async function fetchImfOutlook() {
+  const out = {};
+  for (const ind of Object.keys(IMF_INDICATORS)) {
+    const j = await getJSON(`https://www.imf.org/external/datamapper/api/v1/${ind}/THA/WEOWORLD`);
+    const v = j?.values?.[ind] || {};
+    out[ind] = { THA: v.THA || {}, WLD: v.WEOWORLD || {} };
+  }
+  if (!Object.keys(out.NGDP_RPCH.THA).length) throw new Error('ไม่พบข้อมูลประมาณการของ IMF สำหรับไทย');
+  return { data: out, source: 'IMF World Economic Outlook' };
+}
