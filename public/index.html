@@ -612,6 +612,7 @@ function energyCard(e) {
         <div class="note">สตางค์/หน่วย · งวด ${ft ? esc(ft.current.label) : '–'}${ft?.change != null ? ` · เทียบงวดก่อน ${sgnC(ft.change, 2, true)}` : ''}</div></div>
     </div>
     ${errBox(e.status?.ft)}
+    ${ft?.fallback ? `<div class="muted">ค่า Ft จากข้อมูลที่บันทึกไว้ (ตรวจกับเว็บ กกพ. ล่าสุด ${thDate(ft.checked)})${ft.stale ? ' <span class="err">อาจไม่เป็นปัจจุบัน</span>' : ''}</div>` : ''}
     ${l ? `<div class="explain" style="margin-top:10px">กองทุนน้ำมัน${l.fund < 0 ? `<b>อุดหนุน</b> LPG อยู่ ${fmt(-l.fund)} บาท/กก. (ราว ${fmt(-l.fund * 15, 0)} บาทต่อถัง) ถ้ารัฐลดการอุดหนุน ราคาแก๊สหุงต้มมีโอกาสขึ้น` : `เก็บเงินเข้าจาก LPG ${fmt(l.fund)} บาท/กก.`}</div>` : ''}
     ${ft?.next ? `<div class="explain"><b>งวดถัดไป (${esc(ft.next.label)}):</b> ${fmt(ft.next.ft)} สตางค์/หน่วย (${sgnC(ft.next.ft - ft.current.ft, 2, true)})</div>` : ''}
     ${ft ? `<div class="chart" id="ftChart"></div><div class="muted">ค่า Ft ย้อนหลัง (สตางค์/หน่วย) ปรับทุก 4 เดือน ค่าไฟที่จ่ายจริง = ค่าไฟฐานตามอัตราก้าวหน้า + Ft + ค่าบริการ + VAT</div>` : ''}

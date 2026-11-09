@@ -376,7 +376,15 @@ export async function fetchImfOutlook() {
 // ---------- 13) ค่าไฟฟ้าผันแปร (Ft) จากหน้าเว็บ กกพ. (ปรับทุก 4 เดือน หน่วย สตางค์/หน่วย) ----------
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 export async function fetchFt() {
-  const html = await getText('https://www.erc.or.th/th/automatic/1355');
+  let html;
+  try { html = await getText('https://www.erc.or.th/th/automatic/1355'); }
+  catch (e) {
+    // เว็บ กกพ. เข้าจากเซิร์ฟเวอร์บางแห่งไม่ได้: ใช้ค่าที่บันทึกไว้ใน repo (Ft ปรับทุก 4 เดือน)
+    const { readFileSync } = await import('node:fs');
+    const seed = JSON.parse(readFileSync(new URL('./seed/ft.json', import.meta.url), 'utf8'));
+    console.error('[ft] ใช้ค่าสำรองจาก seed/ft.json:', e.message, e.cause?.code || e.cause?.message || '');
+    return { periods: seed.periods.slice(-12), source: `ค่าที่บันทึกไว้ (ตรวจล่าสุด ${seed.checked})`, fallback: true, checked: seed.checked };
+  }
   const lines = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, '\n')
     .replace(/&nbsp;/g, ' ').split('\n').map((l) => l.replace(/\*+/g, '').trim()).filter(Boolean);
   const rows = [];
