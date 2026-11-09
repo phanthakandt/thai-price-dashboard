@@ -37,6 +37,28 @@ const history = createHistory(path.join(OUT, 'history.json'), { persist: true, s
 const { buildData, exportCache } = createBuilder({ S, history, mock: MOCK, cacheSeed: prevCache, ttlScale: 0, backfillPerRun: 45 });
 
 const data = await buildData();
+
+// ---- แจ้งเตือนผ่าน Telegram (ทำงานเมื่อตั้ง secrets TELEGRAM_BOT_TOKEN และ TELEGRAM_CHAT_ID) ----
+const TG_TOKEN = process.env.TELEGRAM_BOT_TOKEN, TG_CHAT = process.env.TELEGRAM_CHAT_ID;
+const SITE = process.env.PREV_URL || '';
+const pending = (data.alerts || []).filter((a) => !history.alertSent(a.key));
+if (TG_TOKEN && TG_CHAT && !MOCK) {
+  for (const a of pending) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${TG_TOKEN}/sendMessage`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: TG_CHAT, text: a.text + (SITE ? `\n${SITE}` : ''), disable_web_page_preview: true }),
+        signal: AbortSignal.timeout(15000),
+      });
+      if (res.ok) history.markAlert(a.key); else console.log('ส่ง Telegram ไม่สำเร็จ', res.status, (await res.text()).slice(0, 200));
+    } catch (e) { console.log('ส่ง Telegram ไม่สำเร็จ', e.message); }
+  }
+  console.log(`แจ้งเตือน     ส่ง ${pending.length} รายการ`);
+} else {
+  // ยังไม่ได้ตั้งค่า: บันทึกว่าเห็นแล้ว เพื่อไม่ให้ส่งย้อนหลังทั้งหมดเมื่อเริ่มตั้งค่า
+  for (const a of pending) if (!a.key.startsWith('daily:')) history.markAlert(a.key);
+  console.log(`แจ้งเตือน     ยังไม่ได้ตั้งค่า Telegram (มี ${pending.length} เหตุการณ์)`);
+}
 history.save();
 writeFileSync(path.join(OUT, 'data.json'), JSON.stringify(data));
 writeFileSync(path.join(OUT, 'cache.json'), JSON.stringify(exportCache()));
@@ -58,6 +80,7 @@ for (const r of data.forecast?.ranges || []) console.log('คาดการณ�
 for (const o of data.forecast?.oil || []) console.log('คาดการณ์    ', o.key, `กลุ่ม ${o.bucket} n=${o.n} ปรับใน7วัน=${o.pChange?.toFixed(2)} ทางเดียวกัน=${o.pSameDir?.toFixed(2)} คาด=${o.expectedPrice?.toFixed(2)}`);
 const imf = data.forecast?.imf;
 console.log('IMF         ', imf?.status?.ok ? imf.years.join(',') + ' ' + imf.rows.map((r) => `${r.key} TH ${r.th.join('/')} WLD ${r.world.join('/')}`).join(' | ') : imf?.status?.error);
+console.log('ค่าไฟ/LPG    ', data.energy?.ft ? `Ft ${data.energy.ft.current.label} = ${data.energy.ft.current.ft}` : 'Ft: ' + data.energy?.status?.ft?.error, '|', data.energy?.lpg ? `LPG ${data.energy.lpg.perKg} บาท/กก. กองทุน ${data.energy.lpg.fund}` : 'LPG: ไม่มี');
 console.log('สนพ.        ', ok(data.oil.status.eppo), data.oil.eppo ? `ไฟล์วันที่ ${data.oil.eppo.date}, ประวัติ ${data.oil.eppo.history} วัน, เติมย้อนหลัง ${JSON.stringify(data.oil.eppo.backfill)}` : '');
 console.log('ตัวชี้นำ     ', data.leads.items.map((l) => `${l.symbol}:${l.status.ok ? 'OK' : 'X'}`).join(' '));
 console.log('ข่าว        ', data.news.map((n) => `${n.key}:${n.status.ok ? n.items.length : 'X ' + n.status.error}`).join(' '));

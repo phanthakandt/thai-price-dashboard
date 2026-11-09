@@ -175,7 +175,7 @@ export async function fetchInflation() {
 // แยกราคาขายปลีกเป็น ราคา ณ โรงกลั่น + ภาษี + กองทุนน้ำมัน + ค่าการตลาด
 const EPPO_KEYS = [
   ['g95', /^GASOHOL95 E10/i], ['g91', /^GASOHOL91/i], ['e20', /^GASOHOL95 E20/i], ['e85', /^GASOHOL95 E85/i],
-  ['ulg95', /^ULG95/i], ['b20', /^H-DIESEL\s+B20/i], ['diesel', /^H-DIESEL\s*$/i],
+  ['ulg95', /^ULG95/i], ['b20', /^H-DIESEL\s+B20/i], ['diesel', /^H-DIESEL\s*$/i], ['lpg', /^LPG/i],
 ];
 const excelDate = (n) => new Date(Math.round((n - 25569) * 864e5)).toISOString().slice(0, 10);
 
@@ -371,4 +371,25 @@ export async function fetchImfOutlook() {
   }
   if (!Object.keys(out.NGDP_RPCH.THA).length) throw new Error('ไม่พบข้อมูลประมาณการของ IMF สำหรับไทย');
   return { data: out, source: 'IMF World Economic Outlook' };
+}
+
+// ---------- 13) ค่าไฟฟ้าผันแปร (Ft) จากหน้าเว็บ กกพ. (ปรับทุก 4 เดือน หน่วย สตางค์/หน่วย) ----------
+const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+export async function fetchFt() {
+  const html = await getText('https://www.erc.or.th/th/automatic/1355');
+  const lines = html.replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, '\n')
+    .replace(/&nbsp;/g, ' ').split('\n').map((l) => l.replace(/\*+/g, '').trim()).filter(Boolean);
+  const rows = [];
+  const re = new RegExp(`^(${TH_MONTHS.join('|')})\\s*[-–]?\\s*(${TH_MONTHS.join('|')})?\\s*(25\\d\\d)$`);
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(re);
+    if (!m) continue;
+    const ft = toNum(lines[i + 1]);
+    if (ft == null) continue; // ช่วงที่แยกบ้านอยู่อาศัย/ประเภทอื่น ข้ามไป
+    const startMonth = TH_MONTHS.indexOf(m[1]) + 1, endMonth = m[2] ? TH_MONTHS.indexOf(m[2]) + 1 : startMonth;
+    rows.push({ label: lines[i], from: `${+m[3] - 543}-${String(startMonth).padStart(2, '0')}`, to: `${+m[3] - 543}-${String(endMonth).padStart(2, '0')}`, ft });
+  }
+  if (!rows.length) throw new Error('อ่านค่า Ft จากหน้าเว็บ กกพ. ไม่ได้ (หน้าเว็บอาจเปลี่ยนรูปแบบ)');
+  rows.sort((a, b) => a.from.localeCompare(b.from));
+  return { periods: rows.slice(-12), source: 'สำนักงาน กกพ. (erc.or.th)' };
 }

@@ -133,6 +133,7 @@ export async function fetchInflation() {
 
 // ---- โครงสร้างราคา สนพ. สมมติ: ค่าการตลาดแกว่งเพราะราคาไทยปรับช้ากว่าราคาโลก ----
 const eppoSym = { g95: ['แก๊สโซฮอล์ 95', 'RB=F', 7.475, 3.37], diesel: ['ดีเซล', 'HO=F', 7.662, -2.37] };
+let lpgMock = 25.87;
 const eppoFund = {};
 export async function fetchEppo(date) {
   if (date > bkkDate() || date < bkkDate(Date.now(), -95)) throw Object.assign(new Error('ไม่พบไฟล์ (MOCK)'), { notFound: true });
@@ -145,6 +146,7 @@ export async function fetchEppo(date) {
     const mm = retail / 1.07 - exr - tax - eppoFund[k];
     products[k] = { name: k, exr, discount: 0, excise: tax / 1.1, fund: eppoFund[k], ws: exr + tax + eppoFund[k], mm, retail };
   }
+  products.lpg = { name: 'LPG', exr: 33.07, discount: 0, excise: 2.17, fund: -14.54, ws: 22.38, mm: 3.26, retail: date < bkkDate(Date.now(), -40) ? 25.87 - 0.5 : 25.87 };
   return { date, fx: at(fxHist, date), products, avgMM: { all: 2.45, diesel: 2.0 }, source: 'MOCK' };
 }
 export async function fetchNews(q) {
@@ -200,4 +202,10 @@ export async function fetchImfOutlook() {
     PCPIPCH: { THA: yrs({ 2023: 1.2, 2024: 0.4, 2025: 0.2, 2026: 0.6, 2027: 1.0, 2028: 1.5 }), WLD: yrs({ 2023: 6.7, 2024: 5.7, 2025: 4.2, 2026: 3.6, 2027: 3.3, 2028: 3.2 }) },
     LUR: { THA: yrs({ 2023: 1.0, 2024: 1.0, 2025: 0.9, 2026: 1.0, 2027: 1.0, 2028: 1.0 }), WLD: {} },
   }, source: 'MOCK' };
+}
+
+export async function fetchFt() {
+  const p = [['มกราคม – เมษายน 2568', '2025-01', '2025-04', 36.72], ['พฤษภาคม – สิงหาคม 2568', '2025-05', '2025-08', 19.72], ['กันยายน – ธันวาคม 2568', '2025-09', '2025-12', 15.72],
+    ['มกราคม – เมษายน 2569', '2026-01', '2026-04', 9.72], ['พฤษภาคม – สิงหาคม 2569', '2026-05', '2026-08', 16.23], ['กันยายน – ธันวาคม 2569', '2026-09', '2026-12', 16.23]];
+  return { periods: p.map(([label, from, to, ft]) => ({ label, from, to, ft })), source: 'MOCK' };
 }

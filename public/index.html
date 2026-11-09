@@ -65,7 +65,7 @@
   .bar-track { height: 14px; }
   .bar { height: 14px; border-radius: 0 4px 4px 0; }
   .bar-val { font-variant-numeric: tabular-nums; text-align: right; }
-  .section-title { margin-top: 8px; }
+
   .acc { font-size: 13px; color: var(--text-secondary); margin-top: 10px; }
   .live { color: var(--good); font-size: 11px; font-weight: 500; }
   table.sectors th, table.sectors td { white-space: nowrap; vertical-align: top; }
@@ -102,6 +102,20 @@
   .pill-icon { font-size: 13px; }
   .p-up .pill-icon { color: var(--good); } .p-down .pill-icon { color: var(--critical); } .p-flat .pill-icon { color: var(--text-muted); }
   .nw { white-space: nowrap; }
+  html { scroll-behavior: smooth; scroll-padding-top: 56px; }
+  .topnav { position: sticky; top: 0; z-index: 5; display: flex; gap: 4px; overflow-x: auto; padding: 8px 0; margin: -4px 0 12px;
+    background: var(--bg); border-bottom: 1px solid var(--border); scrollbar-width: none; }
+  .topnav::-webkit-scrollbar { display: none; }
+  .topnav a { flex: 0 0 auto; padding: 5px 12px; border-radius: 999px; color: var(--text-secondary); text-decoration: none; font-size: 13px; border: 1px solid transparent; }
+  .topnav a:hover, .topnav a.on { border-color: var(--border); color: var(--text-primary); background: var(--surface-1); }
+  .section-title { margin-top: 18px; padding-top: 6px; border-top: 2px solid var(--text-primary); }
+  .wallet-in { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .wallet-in label { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+  .wallet-in input, .wallet-in select { font: inherit; font-size: 15px; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text-primary); }
+  table.wallet-out { margin-top: 14px; } table.wallet-out td { text-align: left; white-space: normal; }
+  table.acc-t td:nth-child(2), table.acc-t th:nth-child(2) { text-align: left; }
+  details { border-bottom: 1px solid var(--grid); padding: 6px 0; }
+  details summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 4px 0; }
   .fc-oil-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
   .fc-oil-h { margin-bottom: 6px; }
   .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
@@ -138,7 +152,7 @@
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" id="top">
   <header>
     <div>
       <h1>ราคาวันนี้ — ไทยเทียบโลก</h1>
@@ -146,6 +160,9 @@
     </div>
     <div><span class="muted" id="updated"></span> <button id="refresh">อัปเดต</button></div>
   </header>
+  <nav class="topnav" aria-label="หมวด">
+    <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a>
+  </nav>
   <div id="banner"></div>
   <main class="grid" id="app"><div class="card span-12">กำลังโหลดข้อมูล…</div></main>
   <footer>
@@ -368,11 +385,12 @@ function signalMarketCard(d) {
   </section>`;
 }
 
-function newsCard(news) {
-  if (!news?.length) return '';
+function newsCard(allNews, keys, title = 'ข่าวล่าสุดที่เกี่ยวข้อง', span = 12) {
+  const news = (allNews || []).filter((n) => !keys || keys.includes(n.key));
+  if (!news.length) return '';
   const ago = (t) => { if (!t) return ''; const h = (Date.now() - t) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} นาทีก่อน` : h < 24 ? `${Math.round(h)} ชม.ก่อน` : `${Math.round(h / 24)} วันก่อน`; };
-  return `<section class="card span-12">
-    <div class="card-head"><h2>ข่าวล่าสุดที่เกี่ยวข้อง</h2><span class="muted">หัวข้อข่าวจาก Google News · กดเพื่ออ่านที่ต้นทาง</span></div>
+  return `<section class="card span-${span}">
+    <div class="card-head"><h2>${esc(title)}</h2><span class="muted">หัวข้อข่าวจาก Google News · กดเพื่ออ่านที่ต้นทาง</span></div>
     <div class="news">${news.map((n) => `<div><h3>${esc(n.title)}</h3>
       ${n.status.ok ? n.items.map((it) => `<a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><div class="muted">${esc(it.source)} · ${ago(it.time)}</div>`).join('') : `<div class="err">${esc(n.status.error)}</div>`}
     </div>`).join('')}</div>
@@ -458,9 +476,9 @@ function stockCard(stocks) {
   </section>`;
 }
 
-function inflationCard(inf) {
+function inflationCard(inf, span = 12) {
   const th = inf.thailand?.at(-1), w = inf.world?.at(-1);
-  return `<section class="card span-12">
+  return `<section class="card span-${span}">
     <div class="card-head"><h2>เงินเฟ้อ (รายปี)</h2><span class="muted">World Bank · อัปเดตปีละครั้ง</span></div>
     ${errBox(inf.status)}
     <div class="stats">
@@ -539,9 +557,8 @@ function jobsCard(j) {
   </section>`;
 }
 
-function forecastSection(f) {
-  if (!f) return '';
-  const oil = (f.oil || []).map((x) => {
+function oilForecastCard(f) {
+  const oil = (f?.oil || []).map((x) => {
     const pct = (v) => v == null ? '–' : `${Math.round(v * 100)}%`;
     const few = x.n && x.n < 15 ? ' (ข้อมูลในอดีตยังน้อย)' : '';
     const head = x.announced != null
@@ -552,31 +569,136 @@ function forecastSection(f) {
       <div class="explain" style="margin-top:6px">${x.n ? `จาก ${x.n} วันในอดีตที่แรงกดดันระดับเดียวกับตอนนี้ (${{ strong: 'เกิน 1 บาท', medium: '0.3–1 บาท', weak: 'ต่ำกว่า 0.3 บาท' }[x.bucket]}) ราคาปรับภายใน 7 วัน ${pct(x.pChange)} ของครั้ง${x.dir && x.pChange ? ` และในครั้งที่ปรับ เป็นทางเดียวกับแรงกดดัน ${pct(x.pSameDir / x.pChange)}` : ''}` : 'ยังมีข้อมูลในอดีตไม่พอ'}
       ${x.expectedPrice ? `· ถ้าปรับ น่าจะอยู่ราว <b>${fmt(x.expectedPrice)}</b> บาท (ขั้นเฉลี่ย ${fmt(x.step)} บาท)` : ''}</div></div>`;
   }).join('');
-  const ranges = (f.ranges || []).map((r) => {
-    const d = r.decimals, F = (v) => fmt(v, d);
-    const bt = r.backtest?.n ? `ทดสอบย้อนหลัง ${r.backtest.n} ครั้ง: ราคาจริงอยู่ในช่วง 68% <b>${Math.round(r.backtest.cover68 * 100)}%</b> และในช่วง 95% <b>${Math.round(r.backtest.cover95 * 100)}%</b> ของครั้ง` : '';
-    const tr = r.tracking?.n ? ` · บันทึกจริงตั้งแต่เปิดเว็บ ${r.tracking.n} ครั้ง: อยู่ในช่วง 68% ${Math.round(r.tracking.cover68 * 100)}%` : r.tracking ? ` · เริ่มบันทึกผลจริงแล้ว (รอครบกำหนด ${r.tracking.pending} รายการ)` : '';
-    return `<section class="card span-6">
-      <div class="card-head"><h2>${esc(r.label)}</h2><span class="muted">ตอนนี้ ${F(r.now)} ${esc(r.unit)}</span></div>
-      <table><tr><th>ช่วงเวลา</th><th>ช่วงที่น่าจะเป็น (โอกาส ~68%)</th><th class="hide-sm">โอกาส ~95%</th></tr>
-        ${r.horizons.map((h) => `<tr><td>${h.days === 1 ? 'พรุ่งนี้' : h.days + ' วัน'}</td><td><b>${F(h.lo68)} – ${F(h.hi68)}</b></td><td class="hide-sm">${F(h.lo95)} – ${F(h.hi95)}</td></tr>`).join('')}</table>
-      <div class="chart" id="fc-${esc(r.key)}"></div>
-      <div class="acc">${bt}${tr}</div>
-    </section>`;
-  }).join('');
-  const imf = f.imf;
-  const imfCard = imf?.rows ? `<section class="card span-12">
-    <div class="card-head"><h2>ประมาณการเศรษฐกิจของ IMF</h2><span class="muted">World Economic Outlook · ตัวเลขตั้งแต่ปี ${esc(imf.projectedFrom)} เป็นการคาดการณ์</span></div>
+  return oil ? `<section class="card span-12"><div class="card-head"><h2>คาดการณ์น้ำมันหน้าปั๊ม 7 วันข้างหน้า</h2><span class="muted">สถิติจากข้อมูล สนพ.</span></div><div class="fc-oil-grid">${oil}</div></section>` : '';
+}
+
+function rangeCard(r, span = 6) {
+  if (!r) return '';
+  const d = r.decimals, F = (v) => fmt(v, d);
+  const bt = r.backtest?.n ? `ทดสอบย้อนหลัง ${r.backtest.n} ครั้ง: ราคาจริงอยู่ในช่วง 68% <b>${Math.round(r.backtest.cover68 * 100)}%</b> และในช่วง 95% <b>${Math.round(r.backtest.cover95 * 100)}%</b> ของครั้ง` : '';
+  const tr = r.tracking?.n ? ` · บันทึกจริงตั้งแต่เปิดเว็บ ${r.tracking.n} ครั้ง: อยู่ในช่วง 68% ${Math.round(r.tracking.cover68 * 100)}%` : r.tracking ? ` · เริ่มบันทึกผลจริงแล้ว (รอครบกำหนด ${r.tracking.pending} รายการ)` : '';
+  return `<section class="card span-${span}">
+    <div class="card-head"><h2>คาดการณ์ช่วงราคา: ${esc(r.label)}</h2><span class="muted">ตอนนี้ ${F(r.now)} ${esc(r.unit)}</span></div>
+    <table><tr><th>ช่วงเวลา</th><th>ช่วงที่น่าจะเป็น (โอกาส ~68%)</th><th class="hide-sm">โอกาส ~95%</th></tr>
+      ${r.horizons.map((h) => `<tr><td>${h.days === 1 ? 'พรุ่งนี้' : h.days + ' วัน'}</td><td><b>${F(h.lo68)} – ${F(h.hi68)}</b></td><td class="hide-sm">${F(h.lo95)} – ${F(h.hi95)}</td></tr>`).join('')}</table>
+    <div class="chart" id="fc-${esc(r.key)}"></div>
+    <div class="acc">${bt}${tr}</div>
+    <div class="muted" style="margin-top:4px">ช่วงนี้ไม่ได้เดาทิศทาง บอกแค่ว่าราคาน่าจะแกว่งอยู่ในกรอบไหน คิดจากความผันผวนจริง 60 วันล่าสุด</div>
+  </section>`;
+}
+
+function imfCard(imf) {
+  if (!imf) return '';
+  if (!imf.rows) return imf.status && !imf.status.ok ? `<section class="card span-12"><h2>ประมาณการเศรษฐกิจของ IMF</h2>${errBox(imf.status)}</section>` : '';
+  return `<section class="card span-12">
+    <div class="card-head"><h2>ประมาณการเศรษฐกิจของ IMF</h2><span class="muted">World Economic Outlook · ตัวเลขตั้งแต่ปี ${+imf.projectedFrom + 543} เป็นการคาดการณ์</span></div>
     <table><tr><th>ตัวชี้</th>${imf.years.map((y) => `<th>${y >= imf.projectedFrom ? `<span class="badge">คาดการณ์</span><br>` : ''}${+y + 543}</th>`).join('')}</tr>
       ${imf.rows.map((r) => `<tr><td>${esc(r.name)} <span class="muted">ไทย</span></td>${r.th.map((v) => `<td><b>${v == null ? '–' : fmt(v, 1)}</b></td>`).join('')}</tr>
         ${r.world.some((v) => v != null) ? `<tr><td class="muted">${esc(r.name)} โลก</td>${r.world.map((v) => `<td class="muted">${v == null ? '–' : fmt(v, 1)}</td>`).join('')}</tr>` : ''}`).join('')}
     </table>
     <div class="explain">IMF ปรับตัวเลขคาดการณ์ปีละ 2 ครั้ง (เมษายนและตุลาคม) เป็นการคาดการณ์ของเจ้าหน้าที่ IMF ไม่ใช่การรับประกัน ใช้ดูทิศทางของเศรษฐกิจไทยเทียบโลก</div>
-  </section>` : (imf?.status && !imf.status.ok ? `<section class="card span-12"><h2>ประมาณการเศรษฐกิจของ IMF</h2>${errBox(imf.status)}</section>` : '');
-  return `<div class="section-title span-12"><h2>มองไปข้างหน้า: คาดการณ์</h2>
-      <div class="sub">ทุกตัวเลขบอกความแม่นย้อนหลังไว้ด้วย ช่วงราคาไม่ได้เดาทิศทาง แต่บอกว่าราคาน่าจะแกว่งอยู่ในกรอบไหน</div></div>
-    ${oil ? `<section class="card span-12"><div class="card-head"><h2>น้ำมันหน้าปั๊ม 7 วันข้างหน้า</h2><span class="muted">สถิติจากข้อมูล สนพ.</span></div><div class="fc-oil-grid">${oil}</div></section>` : ''}
-    ${ranges}${imfCard}`;
+  </section>`;
+}
+
+function energyCard(e) {
+  if (!e) return '';
+  const l = e.lpg, ft = e.ft;
+  return `<section class="card span-6">
+    <div class="card-head"><h2>พลังงานในบ้าน: แก๊สหุงต้มและค่าไฟ</h2><span class="muted">สนพ. · กกพ.</span></div>
+    <div class="stats">
+      <div class="stat"><div class="label">แก๊สหุงต้ม (LPG)</div><div class="value">${l ? fmt(l.perKg) : '–'}</div>
+        <div class="note">บาท/กก. · ถัง 15 กก. ราว ${l ? fmt(l.tank15, 0) : '–'} บาท${l?.lastChange ? ` · ปรับล่าสุด ${thDate(l.lastChange.date)} (${sgnC(l.lastChange.delta, 2, true)})` : ''}</div></div>
+      <div class="stat"><div class="label">ค่าไฟผันแปร (Ft)</div><div class="value">${ft ? fmt(ft.current.ft) : '–'}</div>
+        <div class="note">สตางค์/หน่วย · งวด ${ft ? esc(ft.current.label) : '–'}${ft?.change != null ? ` · เทียบงวดก่อน ${sgnC(ft.change, 2, true)}` : ''}</div></div>
+    </div>
+    ${errBox(e.status?.ft)}
+    ${l ? `<div class="explain" style="margin-top:10px">กองทุนน้ำมัน${l.fund < 0 ? `<b>อุดหนุน</b> LPG อยู่ ${fmt(-l.fund)} บาท/กก. (ราว ${fmt(-l.fund * 15, 0)} บาทต่อถัง) ถ้ารัฐลดการอุดหนุน ราคาแก๊สหุงต้มมีโอกาสขึ้น` : `เก็บเงินเข้าจาก LPG ${fmt(l.fund)} บาท/กก.`}</div>` : ''}
+    ${ft?.next ? `<div class="explain"><b>งวดถัดไป (${esc(ft.next.label)}):</b> ${fmt(ft.next.ft)} สตางค์/หน่วย (${sgnC(ft.next.ft - ft.current.ft, 2, true)})</div>` : ''}
+    ${ft ? `<div class="chart" id="ftChart"></div><div class="muted">ค่า Ft ย้อนหลัง (สตางค์/หน่วย) ปรับทุก 4 เดือน ค่าไฟที่จ่ายจริง = ค่าไฟฐานตามอัตราก้าวหน้า + Ft + ค่าบริการ + VAT</div>` : ''}
+    <div class="muted" style="margin-top:6px">ราคา LPG เป็นราคาตามโครงสร้างของ สนพ. ราคาส่งถึงบ้านจะสูงกว่านี้ตามค่าขนส่งของร้าน</div>
+  </section>`;
+}
+
+const WALLET_KEY = 'thai-price-wallet-v1';
+function walletCard() {
+  return `<section class="card span-12" id="wallet">
+    <div class="card-head"><h2>กระเป๋าเงินของคุณ</h2><span class="muted">ใส่ตัวเลขของคุณ ระบบคำนวณในเครื่องนี้ ไม่ส่งข้อมูลไปไหน</span></div>
+    <div class="wallet-in">
+      <label>น้ำมันที่เติม<select data-w="fuel"><option value="gasoline">แก๊สโซฮอล์ 95</option><option value="diesel">ดีเซล</option></select></label>
+      <label>ลิตร/เดือน<input type="number" min="0" step="1" data-w="litres" placeholder="เช่น 100"></label>
+      <label>ไฟฟ้า หน่วย/เดือน<input type="number" min="0" step="1" data-w="kwh" placeholder="เช่น 300"></label>
+      <label>แก๊สหุงต้ม ถัง/เดือน<input type="number" min="0" step="0.5" data-w="lpg" placeholder="เช่น 1"></label>
+      <label>ทองที่มี (บาททองคำ)<input type="number" min="0" step="0.25" data-w="gold" placeholder="เช่น 2"></label>
+      <label>เงินดอลลาร์ที่มี (USD)<input type="number" min="0" step="1" data-w="usd" placeholder="เช่น 1000"></label>
+    </div>
+    <div id="walletOut"></div>
+  </section>`;
+}
+function renderWallet(d) {
+  const box = $('#wallet'); if (!box) return;
+  let w = {};
+  try { w = JSON.parse(localStorage.getItem(WALLET_KEY) || '{}'); } catch { /* ไม่มีที่เก็บ */ }
+  box.querySelectorAll('[data-w]').forEach((el) => { if (w[el.dataset.w] != null) el.value = w[el.dataset.w]; });
+  const calc = () => {
+    box.querySelectorAll('[data-w]').forEach((el) => { w[el.dataset.w] = el.value; });
+    try { localStorage.setItem(WALLET_KEY, JSON.stringify(w)); } catch { /* ไม่เป็นไร */ }
+    const num = (k) => Math.max(0, parseFloat(w[k]) || 0);
+    const rows = [];
+    const sig = (d.oil.signals || []).find((x) => x.key === (w.fuel || 'gasoline'));
+    const L = num('litres');
+    if (L && sig?.thaiNow) {
+      const outlook = (d.forecast?.oil || []).find((x) => x.key === sig.key);
+      const vs30 = sig.price30 != null ? (sig.thaiNow - sig.price30) * L : null;
+      const next = sig.announced != null ? sig.announced * L : outlook?.dir && outlook?.step ? outlook.dir * outlook.step * L : null;
+      rows.push(['น้ำมัน', `${fmt(sig.thaiNow * L, 0)} บาท/เดือน`, vs30 != null ? `${sgnC(vs30, 0, true)} บาท/เดือน เทียบ 30 วันก่อน` : '',
+        next != null ? `${sig.announced != null ? 'ราคาพรุ่งนี้' : 'ถ้าปรับตามแนวโน้ม'}: ${sgnC(next, 0, true)} บาท/เดือน` : '']);
+    }
+    const kwh = num('kwh'), ft = d.energy?.ft;
+    if (kwh && ft) {
+      rows.push(['ค่าไฟ (เฉพาะส่วน Ft)', `${fmt(kwh * ft.current.ft / 100, 0)} บาท/เดือน`, ft.change != null ? `${sgnC(kwh * ft.change / 100, 0, true)} บาท/เดือน เทียบงวดก่อน` : '',
+        ft.next ? `งวดหน้า: ${sgnC(kwh * (ft.next.ft - ft.current.ft) / 100, 0, true)} บาท/เดือน` : '']);
+    }
+    const tanks = num('lpg'), lpg = d.energy?.lpg;
+    if (tanks && lpg) rows.push(['แก๊สหุงต้ม', `${fmt(tanks * lpg.tank15, 0)} บาท/เดือน`, 'ตามราคาโครงสร้าง ยังไม่รวมค่าส่ง', lpg.fund < 0 ? `ถ้ารัฐเลิกอุดหนุน: ${sgnC(-lpg.fund * 15 * tanks, 0, true)} บาท/เดือน` : '']);
+    const gold = num('gold'), g = d.gold, gr = (d.forecast?.ranges || []).find((r) => r.key === 'gold');
+    if (gold && g.thai?.barBuy) {
+      const h7 = gr?.horizons.find((h) => h.days === 7);
+      rows.push(['ทองที่มี', `${fmt(gold * g.thai.barBuy, 0)} บาท`, 'มูลค่าตามราคารับซื้อของสมาคมฯ', h7 ? `7 วันข้างหน้า (โอกาส ~68%): ${fmt(gold * h7.lo68, 0)} – ${fmt(gold * h7.hi68, 0)} บาท (ราคาขายออก)` : '']);
+    }
+    const usd = num('usd'), fxNow = d.fx.live?.usdthb ?? d.fx.rates?.USD, fr = (d.forecast?.ranges || []).find((r) => r.key === 'usdthb');
+    if (usd && fxNow) {
+      const h7 = fr?.horizons.find((h) => h.days === 7);
+      rows.push(['ดอลลาร์ที่มี', `${fmt(usd * fxNow, 0)} บาท`, d.fx.live?.change1d != null ? `วันนี้ ${sgnC(usd * fxNow * d.fx.live.change1d / 100, 0)} บาท` : '', h7 ? `7 วันข้างหน้า (โอกาส ~68%): ${fmt(usd * h7.lo68, 0)} – ${fmt(usd * h7.hi68, 0)} บาท` : '']);
+    }
+    $('#walletOut').innerHTML = rows.length ? `<table class="wallet-out">${rows.map((r) => `<tr><td><b>${r[0]}</b></td><td>${r[1]}</td><td class="muted">${r[2]}</td><td class="muted">${r[3]}</td></tr>`).join('')}</table>`
+      : '<div class="muted" style="margin-top:8px">กรอกตัวเลขด้านบนอย่างน้อยหนึ่งช่อง ระบบจะคำนวณให้ทันที และจำค่าไว้ในเบราว์เซอร์นี้</div>';
+  };
+  box.querySelectorAll('[data-w]').forEach((el) => el.addEventListener('input', calc));
+  calc();
+}
+
+function accuracyCard(rows) {
+  if (!rows?.length) return '';
+  const rate = (r) => r.rate == null ? '<span class="muted">ยังไม่มีข้อมูล</span>' : `<b>${Math.round(r.rate * 100)}%</b>`;
+  const ok = (r) => r.rate == null || r.target == null ? '' : Math.abs(r.rate - r.target) <= 0.1 ? '<span class="up">ตรงเป้า</span>' : r.rate > r.target ? '<span class="muted">ช่วงกว้างไป</span>' : '<span class="down">ช่วงแคบไป</span>';
+  return `<section class="card span-12">
+    <div class="card-head"><h2>ความแม่นของระบบ</h2><span class="muted">รวมผลทดสอบทุกการคาดการณ์ไว้ที่เดียว</span></div>
+    <table class="acc-t"><tr><th>เรื่อง</th><th>ตรวจอะไร</th><th>แบบ</th><th>ครั้ง</th><th>ผล</th><th class="hide-sm">หมายเหตุ</th></tr>
+      ${rows.map((r) => `<tr><td>${esc(r.topic)}</td><td>${esc(r.what)}</td><td><span class="badge">${esc(r.kind)}</span></td><td>${r.n}</td><td>${rate(r)} ${ok(r)}</td><td class="hide-sm muted">${esc(r.note || '')}</td></tr>`).join('')}
+    </table>
+    <div class="explain">"ย้อนหลัง" = ทดสอบสูตรกับข้อมูลในอดีต · "บันทึกจริง" = บันทึกคำทำนายไว้ แล้วตรวจกับราคาจริงเมื่อถึงกำหนด ซึ่งเชื่อถือได้มากกว่า
+      ช่วงคาดการณ์ 68% ที่ดีควรครอบคลุมราคาจริงราว 68% ถ้าสูงกว่ามากแปลว่าช่วงกว้างเกินไป ถ้าต่ำกว่ามากแปลว่าช่วงแคบเกินไป</div>
+  </section>`;
+}
+
+function archiveCard(days) {
+  if (!days?.length) return `<section class="card span-12"><h2>สรุปย้อนหลัง</h2><div class="muted">เริ่มเก็บสรุปรายวันแล้ว จะเห็นข้อมูลตั้งแต่พรุ่งนี้เป็นต้นไป</div></section>`;
+  const icon = (it) => it.dir > 0 ? '▲' : it.dir < 0 ? '▼' : '●';
+  return `<section class="card span-12 summary">
+    <div class="card-head"><h2>สรุปย้อนหลัง</h2><span class="muted">สรุปท้ายวันของแต่ละวัน ${days.length} วันล่าสุด · ใช้เทียบว่าระบบเคยบอกอะไร แล้วเกิดอะไรขึ้นจริง</span></div>
+    ${days.map((d) => `<details><summary>${new Date(d.date).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: '2-digit' })}</summary>
+      <ul>${d.items.map((it) => `<li><span class="tag">${esc(it.tag)}</span><span class="si ${it.dir === 0 ? '' : (it.dir > 0) !== !!it.cost ? 'up' : 'down'}">${icon(it)}</span>${esc(it.text)}</li>`).join('')}</ul></details>`).join('')}
+  </section>`;
 }
 
 function summaryCard(items) {
@@ -628,19 +750,38 @@ async function load() {
     $('#banner').innerHTML = d.mock ? '<div class="banner">โหมดข้อมูลตัวอย่าง (MOCK) — ตัวเลขในหน้านี้เป็นของสมมติ ไม่ใช่ราคาจริง</div>' : '';
     $('#updated').textContent = 'อัปเดต ' + new Date(d.generatedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
     charts.length = 0;
-    $('#app').innerHTML = summaryCard(d.summary) +
-      `<div class="section-title span-12"><h2>สัญญาณทิศทาง: ราคาโลกเปลี่ยน → ราคาไทยน่าจะปรับตาม</h2>
-        <div class="sub">คำนวณจากราคาโลกที่แปลงเป็นบาทแล้ว ใช้ดูทิศทางเท่านั้น ไม่ใช่การพยากรณ์ที่แม่นยำ</div></div>` +
-      d.oil.signals.map(signalOilCard).join('') + signalGoldCard(d.gold) + signalMarketCard(d) + sectorsCard(d.sectors) + newsCard(d.news) +
-      forecastSection(d.forecast) +
-      `<div class="section-title span-12"><h2>ราคาปัจจุบัน ไทยเทียบโลก</h2></div>` +
-      goldCard(d.gold) + oilCard(d.oil) + fxCard(d.fx) + stockCard(d.stocks) + inflationCard(d.inflation) + unemploymentCard(d.unemployment) + jobsCard(d.jobs) +
+    const R = (k) => (d.forecast?.ranges || []).find((r) => r.key === k);
+    const sec = (id, title, sub) => `<div class="section-title span-12" id="${id}"><h2>${title}</h2>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
+    $('#app').innerHTML = summaryCard(d.summary) + walletCard() +
+      sec('cost', 'ค่าครองชีพ', 'น้ำมัน แก๊สหุงต้ม ค่าไฟ และเงินเฟ้อ: ตอนนี้เป็นอย่างไร สัญญาณบอกอะไร และข้างหน้าน่าจะเป็นอย่างไร') +
+      d.oil.signals.map(signalOilCard).join('') + oilForecastCard(d.forecast) +
+      oilCard(d.oil) + energyCard(d.energy) +
+      rangeCard(R('brent')) + inflationCard(d.inflation, 6) +
+      newsCard(d.news, ['oil'], 'ข่าวน้ำมันและพลังงาน') +
       `<div class="card span-12 explain" style="margin:0">
-        <b>ข้อควรรู้เรื่องการประมาณ</b> ข้อมูล สนพ. แสดงว่าค่าการตลาดของไทยแทบคงที่ เมื่อราคาเนื้อน้ำมัน (อิงตลาดสิงคโปร์) ขยับ กองทุนน้ำมันจะรับส่วนต่างไว้ก่อน
+        <b>ข้อควรรู้เรื่องการประมาณราคาน้ำมัน</b> ข้อมูล สนพ. แสดงว่าค่าการตลาดของไทยแทบคงที่ เมื่อราคาเนื้อน้ำมัน (อิงตลาดสิงคโปร์) ขยับ กองทุนน้ำมันจะรับส่วนต่างไว้ก่อน
         แล้วราคาขายปลีกจะถูกปรับเป็นขั้นเมื่อแรงกดดันสะสมพอ แรงกดดันคิดจากต้นทุนที่เปลี่ยนไปตั้งแต่ปรับครั้งล่าสุด รวมกับภาระที่กองทุนอุดหนุนอยู่ เว็บนี้จึงบอก "ทิศทางที่น่าจะปรับ" ได้ดีกว่า "วันที่จะปรับ"
         การขยับของตลาดโลกหลังวันที่ของไฟล์ สนพ. ประมาณจากตลาดนิวยอร์ก (RBOB, ULSD) ดีเซลขึ้นกับนโยบายกองทุนน้ำมันมาก จึงคาดการณ์ได้ยากกว่า
-        ตัวเลข "ทดสอบย้อนหลัง" ในแต่ละการ์ดบอกว่าเชื่อได้แค่ไหน
-      </div>`;
+      </div>` +
+      sec('invest', 'เงินออมและการลงทุน', 'ทอง ค่าเงิน และตลาดหุ้น') +
+      signalGoldCard(d.gold) + goldCard(d.gold) +
+      rangeCard(R('gold')) + rangeCard(R('usdthb')) +
+      fxCard(d.fx) + stockCard(d.stocks) +
+      signalMarketCard(d) + rangeCard(R('set')) +
+      sectorsCard(d.sectors) +
+      newsCard(d.news, ['gold', 'stock', 'fx'], 'ข่าวทอง หุ้น และค่าเงิน') +
+      sec('work', 'งานและรายได้', 'การว่างงาน และงานกลุ่มไหนกำลังโตหรือหด') +
+      unemploymentCard(d.unemployment) + jobsCard(d.jobs) +
+      sec('macro', 'ภาพรวมเศรษฐกิจ', 'ประมาณการของ IMF ไทยเทียบโลก') +
+      imfCard(d.forecast?.imf) +
+      sec('accuracy', 'ความแม่นและย้อนหลัง', 'ตรวจว่าที่ระบบเคยบอก ถูกแค่ไหน') +
+      accuracyCard(d.accuracy) + archiveCard(d.archive);
+
+    renderWallet(d);
+    if (d.energy?.ft?.history?.length && $('#ftChart')) {
+      lineChart($('#ftChart'), [{ name: 'Ft', color: '--series-1', step: true, points: d.energy.ft.history.map((p) => ({ date: p.from + '-01', value: p.ft })) }],
+        { height: 140, zero: true, xLabel: (x) => `${x.slice(5, 7)}/${String(+x.slice(0, 4) + 543).slice(2)}`, format: (v) => fmt(v, 2), label: 'ค่า Ft ย้อนหลัง' });
+    }
 
     for (const s of d.oil.signals) {
       if (!s.ok) continue;
@@ -743,6 +884,13 @@ async function liveGold() {
 }
 setInterval(liveGold, 60 * 1000);
 $('#refresh').onclick = load;
+// ไฮไลต์เมนูตามหมวดที่กำลังอ่าน
+addEventListener('scroll', () => {
+  const ids = ['top', 'wallet', 'cost', 'invest', 'work', 'macro', 'accuracy'];
+  let cur = 'top';
+  for (const id of ids) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < 90) cur = id; }
+  document.querySelectorAll('.topnav a').forEach((a) => a.classList.toggle('on', a.getAttribute('href') === '#' + cur));
+}, { passive: true });
 let rt; addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => charts.forEach((c) => c()), 150); });
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => charts.forEach((c) => c()));
 load();
