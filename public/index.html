@@ -106,6 +106,10 @@
   .pill-icon { font-size: 13px; }
   .p-up .pill-icon { color: var(--good); } .p-down .pill-icon { color: var(--critical); } .p-flat .pill-icon { color: var(--text-muted); }
   .nw { white-space: nowrap; }
+  .refresh-box { text-align: right; }
+  #refreshMsg { font-size: 12px; margin-top: 4px; min-height: 1em; max-width: 320px; margin-left: auto; }
+  button:disabled { opacity: .6; cursor: progress; }
+  @media (max-width: 600px) { .refresh-box { text-align: left; } #refreshMsg { margin-left: 0; } }
   html { scroll-behavior: smooth; scroll-padding-top: 56px; }
   .topnav { position: sticky; top: 0; z-index: 5; display: flex; gap: 4px; overflow-x: auto; padding: 8px 0; margin: -4px 0 12px;
     background: var(--bg); border-bottom: 1px solid var(--border); scrollbar-width: none; }
@@ -174,7 +178,8 @@
       <h1>ราคาวันนี้ — ไทยเทียบโลก</h1>
       <div class="sub">ทอง · น้ำมัน · ค่าเงิน · หุ้น · เงินเฟ้อ · การว่างงาน · อาชีพ ไทยเทียบโลก</div>
     </div>
-    <div><span class="muted" id="updated"></span> <button id="refresh">อัปเดต</button></div>
+    <div class="refresh-box"><span class="muted" id="updated"></span> <button id="refresh" type="button">อัปเดต</button>
+      <div class="muted" id="refreshMsg" role="status" aria-live="polite"></div></div>
   </header>
   <nav class="topnav" aria-label="หมวด">
     <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a>
@@ -772,13 +777,34 @@ function sectorsCard(sx) {
 }
 
 // ---------- โหลดข้อมูลและวาดหน้า ----------
-async function load() {
-  $('#refresh').disabled = true;
+let lastGenerated = null;
+const timeTh = (t) => new Date(t).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+function showAge() {
+  if (!lastGenerated) return;
+  const mins = Math.max(0, Math.round((Date.now() - lastGenerated) / 60000));
+  $('#updated').textContent = `ข้อมูลเมื่อ ${timeTh(lastGenerated)} (${mins < 1 ? 'เพิ่งอัปเดต' : mins + ' นาทีที่แล้ว'})`;
+}
+setInterval(showAge, 30 * 1000);
+
+async function load(manual = false) {
+  const btn = $('#refresh');
+  btn.disabled = true;
+  if (manual) { btn.textContent = 'กำลังโหลด…'; $('#refreshMsg').textContent = ''; }
+  const before = lastGenerated;
   try {
-    const d = await (await fetch('data.json', { cache: 'no-store' })).json();
+    // ?t= ข้ามแคชของ GitHub Pages (เก็บไฟล์ไว้ได้ราว 10 นาที)
+    const d = await (await fetch(`data.json?t=${Date.now()}`, { cache: 'no-store' })).json();
     lastData = d;
     $('#banner').innerHTML = d.mock ? '<div class="banner">โหมดข้อมูลตัวอย่าง (MOCK) — ตัวเลขในหน้านี้เป็นของสมมติ ไม่ใช่ราคาจริง</div>' : '';
-    $('#updated').textContent = 'อัปเดต ' + new Date(d.generatedAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+    lastGenerated = new Date(d.generatedAt).getTime();
+    showAge();
+    if (manual) {
+      // ข้อมูลสร้างใหม่ทุก 15 นาที บอกให้ชัดว่าได้ชุดใหม่หรือยังเป็นชุดเดิม
+      const next = new Date(lastGenerated + 15 * 60000);
+      $('#refreshMsg').innerHTML = before && lastGenerated <= before
+        ? `เป็นข้อมูลล่าสุดแล้ว · รอบถัดไปราว ${timeTh(Math.max(next, Date.now() + 60000))} น. · ราคาทองโลกอัปเดตสดแล้ว`
+        : `<span class="up">ได้ข้อมูลใหม่แล้ว</span>`;
+    }
     charts.length = 0;
     const R = (k) => (d.forecast?.ranges || []).find((r) => r.key === k);
     const sec = (id, title, sub) => `<div class="section-title span-12" id="${id}"><h2>${title}</h2>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
@@ -892,7 +918,7 @@ async function load() {
     if (!d.mock) liveGold();
   } catch (e) {
     $('#app').innerHTML = `<div class="card span-12 err">โหลดข้อมูลไม่สำเร็จ: ${esc(e.message)}</div>`;
-  } finally { $('#refresh').disabled = false; }
+  } finally { btn.disabled = false; btn.textContent = 'อัปเดต'; }
 }
 // ทอง: ดึงราคาโลกทุก 1 นาทีขณะเปิดหน้าเว็บ แล้วคำนวณราคาที่ราคาโลกชี้ใหม่ (สูตรเดียวกับฝั่งเซิร์ฟเวอร์)
 let lastData = null;
@@ -913,7 +939,7 @@ async function liveGold() {
   } catch { /* ใช้ค่าจากรอบล่าสุดต่อ */ }
 }
 setInterval(liveGold, 60 * 1000);
-$('#refresh').onclick = load;
+$('#refresh').onclick = () => load(true);
 // ไฮไลต์เมนูตามหมวดที่กำลังอ่าน
 addEventListener('scroll', () => {
   const ids = ['top', 'wallet', 'cost', 'invest', 'work', 'macro', 'accuracy'];
