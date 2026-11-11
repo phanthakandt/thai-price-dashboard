@@ -173,7 +173,20 @@
   .cheer h2 { font-size: 16px; margin: 0 0 4px; }
   .cheer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
   .cheer-grid img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; object-position: 50% 30%; border-radius: 14px; display: block; background: var(--grid); }
-  @media (max-width: 600px) { .cheer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .cheer-grid img:first-child { grid-column: 1 / -1; aspect-ratio: 4 / 5; } }
+  .cheer-item { position: relative; }
+  .heart-btn { position: absolute; right: 10px; bottom: 10px; display: flex; align-items: center; gap: 4px; height: 36px; padding: 0 12px 0 10px; border: 0; border-radius: 999px;
+    background: rgba(255,255,255,.88); color: #e0245e; font-size: 13px; font-weight: 600; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,.18); touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+  .heart-btn .h { font-size: 18px; line-height: 1; display: inline-block; transition: transform .15s; }
+  .heart-btn:active .h, .heart-btn.pop .h { transform: scale(1.35); }
+  .heart-btn .c { color: #333; min-width: 1ch; }
+  .fly-heart { position: fixed; z-index: 60; pointer-events: none; line-height: 1; will-change: transform, opacity; animation: fly-up var(--dur) ease-out forwards; }
+  @keyframes fly-up {
+    0% { transform: translate(-50%, -50%) scale(.4); opacity: 0; }
+    12% { transform: translate(calc(-50% + var(--dx) * .15), calc(-50% - 30px)) scale(1.1); opacity: 1; }
+    100% { transform: translate(calc(-50% + var(--dx)), calc(-50% - var(--rise))) scale(.9) rotate(var(--rot)); opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { .fly-heart { animation-duration: 1s; } }
+  @media (max-width: 600px) { .cheer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .cheer-item:first-child { grid-column: 1 / -1; } .cheer-item:first-child img { aspect-ratio: 4 / 5; } .heart-btn { right: 8px; bottom: 8px; height: 32px; } }
   /* ---------- น้องชวนดูข่าว ---------- */
   .nong { position: fixed; right: 18px; bottom: 18px; z-index: 50; display: flex; align-items: flex-end; gap: 10px; flex-direction: row-reverse; pointer-events: none; }
   .nong[hidden], .nong-back[hidden] { display: none; }
@@ -241,9 +254,9 @@
     <h2>กำลังใจประจำวัน 💪</h2>
     <div class="muted">ตลาดจะขึ้นหรือลง วันนี้ก็สู้ต่อนะ — สวีรั่วฮาน</div>
     <div class="cheer-grid">
-      <img src="img/cheer-1.jpg" alt="สวีรั่วฮาน รูปที่ 1" loading="lazy" decoding="async">
-      <img style="object-position:50% 55%" src="img/cheer-2.jpg" alt="สวีรั่วฮาน รูปที่ 2" loading="lazy" decoding="async">
-      <img src="img/cheer-3.jpg" alt="สวีรั่วฮาน รูปที่ 3" loading="lazy" decoding="async">
+      <div class="cheer-item"><img src="img/cheer-1.jpg" alt="สวีรั่วฮาน รูปที่ 1" loading="lazy" decoding="async"><button class="heart-btn" data-pic="1" aria-label="ส่งหัวใจให้รูปที่ 1"><span class="h">❤️</span><span class="c"></span></button></div>
+      <div class="cheer-item"><img style="object-position:50% 55%" src="img/cheer-2.jpg" alt="สวีรั่วฮาน รูปที่ 2" loading="lazy" decoding="async"><button class="heart-btn" data-pic="2" aria-label="ส่งหัวใจให้รูปที่ 2"><span class="h">❤️</span><span class="c"></span></button></div>
+      <div class="cheer-item"><img src="img/cheer-3.jpg" alt="สวีรั่วฮาน รูปที่ 3" loading="lazy" decoding="async"><button class="heart-btn" data-pic="3" aria-label="ส่งหัวใจให้รูปที่ 3"><span class="h">❤️</span><span class="c"></span></button></div>
     </div>
     <button class="nong-back" id="nongBack" hidden>👋 เรียกน้องกลับมาชวนดูข่าว</button>
   </section>
@@ -1255,6 +1268,37 @@ $('#nongBack').onclick = () => { nongSave({ hidden: false }); nongShow(true); };
 $('#nongJump').onclick = (e) => { if (e.target.closest('a')) nongClose(); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#nongPanel').hidden) nongClose(); });
 document.addEventListener('click', (e) => { if (!$('#nongPanel').hidden && !e.target.closest('#nongPanel, #nong')) nongClose(); });
+
+// ---------- ส่งหัวใจให้น้อง ----------
+const HEART_KEY = 'thai-price-hearts-v1';
+const heartCounts = () => { try { return JSON.parse(localStorage.getItem(HEART_KEY)) || {}; } catch { return {}; } };
+function heartLabel() { const c = heartCounts(); document.querySelectorAll('.heart-btn').forEach((b) => { b.querySelector('.c').textContent = c[b.dataset.pic] ? c[b.dataset.pic].toLocaleString('th-TH') : ''; }); }
+function flyHearts(x, y) {
+  const kinds = ['❤️', '💕', '💖', '💗', '💓', '🩷'], reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const n = reduce ? 3 : 10 + Math.floor(Math.random() * 5);
+  for (let i = 0; i < n; i++) {
+    const h = document.createElement('span');
+    h.className = 'fly-heart'; h.textContent = kinds[Math.floor(Math.random() * kinds.length)];
+    h.style.left = x + (Math.random() - .5) * 40 + 'px'; h.style.top = y + (Math.random() - .5) * 20 + 'px';
+    h.style.fontSize = 16 + Math.random() * 22 + 'px';
+    h.style.setProperty('--dx', (Math.random() - .5) * 220 + 'px');
+    h.style.setProperty('--rise', 180 + Math.random() * Math.min(420, innerHeight * .6) + 'px');
+    h.style.setProperty('--rot', (Math.random() - .5) * 60 + 'deg');
+    h.style.setProperty('--dur', 1.6 + Math.random() * 1.4 + 's');
+    h.style.animationDelay = Math.random() * .25 + 's';
+    h.addEventListener('animationend', () => h.remove());
+    document.body.appendChild(h);
+  }
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.heart-btn'); if (!b) return;
+  const r = b.getBoundingClientRect();
+  flyHearts(e.clientX || r.left + r.width / 2, e.clientY || r.top + r.height / 2);
+  const c = heartCounts(); c[b.dataset.pic] = (c[b.dataset.pic] || 0) + 1;
+  try { localStorage.setItem(HEART_KEY, JSON.stringify(c)); } catch {}
+  heartLabel(); b.classList.add('pop'); setTimeout(() => b.classList.remove('pop'), 150);
+});
+heartLabel();
 
 async function liveGold() {
   const s = lastData?.gold?.signal;
