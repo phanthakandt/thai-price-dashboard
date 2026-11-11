@@ -151,7 +151,7 @@ export async function fetchEppo(date) {
 }
 export async function fetchNews(q) {
   const t = q.includes('น้ำมัน') ? ['ผู้ค้าประกาศลดราคาเบนซินพรุ่งนี้ 40 สตางค์ (ตัวอย่าง)', 'กบน. คงอัตราเงินกองทุนดีเซล (ตัวอย่าง)']
-    : q.includes('ทอง') ? ['ทองเปิดตลาดบวก 100 บาท (ตัวอย่าง)'] : q.includes('SET') ? ['SET ปิดลบตามตลาดภูมิภาค (ตัวอย่าง)'] : ['บาทอ่อนค่าตามดอลลาร์ (ตัวอย่าง)'];
+    : q.includes('ทอง') ? ['ทองเปิดตลาดบวก 100 บาท (ตัวอย่าง)'] : q.includes('SET') ? ['SET ปิดลบตามตลาดภูมิภาค (ตัวอย่าง)'] : q.includes('ส่งออก') ? ['ส่งออกเดือนล่าสุดโตต่อเนื่อง (ตัวอย่าง)', 'สภาพัฒน์ปรับคาดการณ์ GDP (ตัวอย่าง)'] : ['บาทอ่อนค่าตามดอลลาร์ (ตัวอย่าง)'];
   return t.map((title, i) => ({ title, link: 'https://example.com/', source: 'ข่าวตัวอย่าง', time: Date.now() - (i + 1) * 3600e3 }));
 }
 export async function fetchEppoIndex() {

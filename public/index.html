@@ -174,6 +174,49 @@
   .cheer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
   .cheer-grid img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; object-position: 50% 30%; border-radius: 14px; display: block; background: var(--grid); }
   @media (max-width: 600px) { .cheer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .cheer-grid img:first-child { grid-column: 1 / -1; aspect-ratio: 4 / 5; } }
+  /* ---------- น้องชวนดูข่าว ---------- */
+  .nong { position: fixed; right: 18px; bottom: 18px; z-index: 50; display: flex; align-items: flex-end; gap: 10px; flex-direction: row-reverse; pointer-events: none; }
+  .nong > * { pointer-events: auto; }
+  .nong-btn { position: relative; width: 64px; height: 64px; border-radius: 50%; padding: 0; border: 3px solid var(--surface-1); box-shadow: 0 4px 16px rgba(0,0,0,.22); cursor: pointer; background: var(--grid); flex: none; transition: transform .2s; }
+  .nong-btn:hover { transform: scale(1.06); }
+  .nong-btn img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+  .nong-badge { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 10px; background: var(--critical); color: #fff; font-size: 11px; font-weight: 700; line-height: 20px; text-align: center; border: 2px solid var(--surface-1); }
+  .nong-badge[hidden] { display: none; }
+  .nong-x { position: absolute; bottom: -2px; right: 50px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: var(--text-secondary); color: var(--surface-1); font-size: 12px; line-height: 20px; padding: 0; cursor: pointer; opacity: 0; transition: opacity .2s; }
+  .nong:hover .nong-x, .nong-x:focus { opacity: 1; }
+  .nong-bubble { max-width: 300px; background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border, var(--grid)); border-radius: 16px 16px 4px 16px; padding: 10px 12px; font-size: 13px; line-height: 1.5; box-shadow: 0 6px 22px rgba(0,0,0,.16); cursor: pointer; margin-bottom: 26px;
+    opacity: 0; transform: translateY(8px) scale(.96); transform-origin: bottom right; transition: opacity .25s, transform .25s; }
+  .nong-bubble:not(.show) { pointer-events: none; }
+  .nong-bubble.show { opacity: 1; transform: none; }
+  .nong-bubble b { color: var(--text-primary); }
+  .nong-bubble .who { font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 2px; }
+  .nong-panel { position: fixed; right: 18px; bottom: 96px; z-index: 51; width: 380px; max-height: min(70vh, 560px); display: flex; flex-direction: column; background: var(--surface-1); border: 1px solid var(--grid); border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.25); overflow: hidden; }
+  .nong-panel[hidden] { display: none; }
+  .nong-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--grid); }
+  .nong-head img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
+  .nong-head .t { flex: 1; font-size: 14px; font-weight: 600; }
+  .nong-head .t span { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); }
+  .nong-head button { border: 0; background: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 4px 8px; }
+  .nong-body { overflow-y: auto; padding: 6px 14px 12px; -webkit-overflow-scrolling: touch; }
+  .nong-say { margin: 8px 0 10px; padding: 8px 10px; border-radius: 10px; background: var(--grid); font-size: 13px; }
+  .nong-say li { margin: 3px 0; } .nong-say ul { margin: 0; padding-left: 18px; }
+  .nong-item { display: block; padding: 8px 0; border-top: 1px solid var(--grid); text-decoration: none; color: var(--text-primary); font-size: 13.5px; line-height: 1.45; }
+  .nong-item:first-of-type { border-top: 0; }
+  .nong-item .m { display: block; font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+  .nong-new { display: inline-block; font-size: 10px; font-weight: 700; color: #fff; background: var(--critical); border-radius: 6px; padding: 0 5px; margin-right: 4px; vertical-align: 1px; }
+  .nong-tag { display: inline-block; font-size: 10.5px; color: var(--text-secondary); border: 1px solid var(--grid); border-radius: 6px; padding: 0 5px; margin-right: 4px; }
+  .nong-jump { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--grid); }
+  .nong-jump a { font-size: 12px; text-decoration: none; color: var(--text-secondary); border: 1px solid var(--grid); border-radius: 999px; padding: 3px 10px; }
+  .nong-back { margin-top: 10px; font-size: 12px; background: none; border: 1px solid var(--grid); border-radius: 999px; padding: 4px 12px; color: var(--text-secondary); cursor: pointer; }
+  @media (max-width: 600px) {
+    .nong { right: 12px; bottom: 12px; gap: 8px; }
+    .nong-btn { width: 52px; height: 52px; }
+    .nong-x { opacity: 1; right: 38px; }
+    .nong-bubble { max-width: calc(100vw - 92px); font-size: 12.5px; margin-bottom: 18px; }
+    .nong-panel { left: 0; right: 0; bottom: 0; width: auto; max-height: 75vh; border-radius: 18px 18px 0 0; }
+    body.nong-open { overflow: hidden; }
+  }
+  @media (prefers-reduced-motion: reduce) { .nong-bubble, .nong-btn { transition: none; } }
   footer { margin-top: 24px; color: var(--text-muted); font-size: 12px; }
   footer a { color: var(--text-secondary); }
 </style>
@@ -201,11 +244,25 @@
       <img style="object-position:50% 55%" src="img/cheer-2.jpg" alt="สวีรั่วฮาน รูปที่ 2" loading="lazy" decoding="async">
       <img src="img/cheer-3.jpg" alt="สวีรั่วฮาน รูปที่ 3" loading="lazy" decoding="async">
     </div>
+    <button class="nong-back" id="nongBack" hidden>👋 เรียกน้องกลับมาชวนดูข่าว</button>
   </section>
   <footer>
     แหล่งข้อมูล: สนพ. (โครงสร้างราคาน้ำมัน) · สมาคมค้าทองคำ · gold-api.com · บางจาก · ตลาดหลักทรัพย์ฯ · Yahoo Finance (ราคาดีเลย์) · Frankfurter · World Bank · ILOSTAT · IMF · ThaiBMA · กกพ. · Google News
     — ใช้ประกอบการติดตามเท่านั้น ไม่ใช่คำแนะนำการลงทุน
   </footer>
+</div>
+<div class="nong" id="nong" hidden>
+  <button class="nong-btn" id="nongBtn" aria-label="เปิดข่าวล่าสุด" aria-expanded="false" aria-controls="nongPanel">
+    <img src="img/nong.jpg" alt="">
+    <span class="nong-badge" id="nongBadge" hidden></span>
+  </button>
+  <button class="nong-x" id="nongX" aria-label="ซ่อนน้อง">×</button>
+  <div class="nong-bubble" id="nongBubble" role="status" aria-live="polite"></div>
+</div>
+<div class="nong-panel" id="nongPanel" role="dialog" aria-label="ข่าวล่าสุด" hidden>
+  <div class="nong-head"><img src="img/nong.jpg" alt=""><div class="t">น้องสรุปข่าวมาให้แล้ว<span id="nongSub"></span></div><button id="nongClose" aria-label="ปิด">×</button></div>
+  <div class="nong-body" id="nongBody"></div>
+  <div class="nong-jump" id="nongJump"></div>
 </div>
 
 <script>
@@ -471,7 +528,7 @@ function newsCard(allNews, keys, title = 'ข่าวล่าสุดที�
   const news = (allNews || []).filter((n) => !keys || keys.includes(n.key));
   if (!news.length) return '';
   const ago = (t) => { if (!t) return ''; const h = (Date.now() - t) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} นาทีก่อน` : h < 24 ? `${Math.round(h)} ชม.ก่อน` : `${Math.round(h / 24)} วันก่อน`; };
-  return `<section class="card span-${span}">
+  return `<section class="card span-${span}" id="news-${esc(news[0].key)}">
     <div class="card-head"><h2>${esc(title)}</h2><span class="muted">หัวข้อข่าวจาก Google News · กดเพื่ออ่านที่ต้นทาง</span></div>
     <div class="news">${news.map((n) => `<div><h3>${esc(n.title)}</h3>
       ${n.status.ok ? n.items.map((it) => `<a href="${esc(it.link)}" target="_blank" rel="noopener">${esc(it.title)}</a><div class="muted">${esc(it.source)} · ${ago(it.time)}</div>`).join('') : `<div class="err">${esc(n.status.error)}</div>`}
@@ -996,11 +1053,13 @@ async function load(manual = false) {
       unemploymentCard(d.unemployment) + jobsCard(d.jobs) +
       sec('macro', 'ภาพรวมเศรษฐกิจ', 'GDP การส่งออก นำเข้า ดุลการค้า ไทยเทียบเพื่อนบ้านและโลก') +
       tradeCard(d.macro) + peersCard(d.macro) + peerTradeCard(d.macro) +
+      newsCard(d.news, ['econ'], 'ข่าวเศรษฐกิจและการค้า') +
       imfCard(d.forecast?.imf) +
       sec('accuracy', 'ความแม่นและย้อนหลัง', 'ตรวจว่าที่ระบบเคยบอก ถูกแค่ไหน') +
       accuracyCard(d.accuracy) + archiveCard(d.archive);
 
     renderWallet(d);
+    nongUpdate(d);
     const tr = d.macro?.trade;
     if (tr && $('#tradeChart')) {
       const rows = tr.rows.slice(-24), pt = (k) => rows.map((r) => ({ date: r.date, value: r[k] / 1000 }));
@@ -1113,6 +1172,89 @@ async function load(manual = false) {
 }
 // ทอง: ดึงราคาโลกทุก 1 นาทีขณะเปิดหน้าเว็บ แล้วคำนวณราคาที่ราคาโลกชี้ใหม่ (สูตรเดียวกับฝั่งเซิร์ฟเวอร์)
 let lastData = null;
+// ---------- น้องชวนดูข่าว ----------
+const NONG_KEY = 'thai-price-nong-v1';
+const nong = { msgs: [], i: 0, timer: null, hideT: null, d: null };
+const nongState = () => { try { return JSON.parse(localStorage.getItem(NONG_KEY)) || {}; } catch { return {}; } };
+const nongSave = (o) => { try { localStorage.setItem(NONG_KEY, JSON.stringify({ ...nongState(), ...o })); } catch {} };
+const NONG_SEC = { 'น้ำมัน': '#cost', 'คาดการณ์': '#cost', 'LPG': '#cost', 'ค่าไฟ': '#cost', 'ทอง': '#invest', 'ค่าเงิน': '#invest', 'หุ้น': '#invest',
+  'กลุ่มธุรกิจ': '#invest', 'ตราสารหนี้': '#bonds', 'การค้า': '#macro', 'การว่างงาน': '#work', 'อาชีพ': '#work' };
+const NONG_NEWS = { oil: 'น้ำมัน', gold: 'ทอง', stock: 'หุ้น', fx: 'ค่าเงิน', econ: 'เศรษฐกิจ' };
+function nongNews(d) {
+  const seen = new Set();
+  return (d.news || []).flatMap((n) => (n.items || []).map((it) => ({ ...it, key: n.key })))
+    .filter((it) => it.link && !seen.has(it.title) && seen.add(it.title))
+    .sort((a, b) => (b.time || 0) - (a.time || 0));
+}
+// ข่าว "ใหม่" = หลังจากที่เปิดดูกล่องข่าวครั้งล่าสุด (ครั้งแรกนับข่าว 12 ชม.ล่าสุด)
+const nongSince = () => nongState().seen || Date.now() - 12 * 3600e3;
+// ประโยคที่น้องพูด: ใช้ข้อสรุปที่ระบบคำนวณไว้แล้ว + ข่าวใหม่
+function nongMessages(d) {
+  const news = nongNews(d), fresh = news.filter((n) => (n.time || 0) > nongSince());
+  const M = [];
+  if (fresh.length) M.push({ html: `มีข่าวใหม่ <b>${fresh.length} ข่าว</b> นะ มาดูกัน! 👀`, open: true });
+  const tone = (x) => {
+    if (x.tag === 'น้ำมัน' && x.dir > 0) return ' เติมก่อนดีไหม ⛽';
+    if (x.tag === 'น้ำมัน' && x.dir < 0) return ' รออีกนิดก็ได้นะ';
+    if (x.tag === 'ทอง' && x.dir) return x.dir > 0 ? ' ✨' : ' รอดูก่อนนะ';
+    if (x.tag === 'การค้า' && x.dir > 0) return ' เก่งมาก 📦';
+    return '';
+  };
+  for (const x of (d.summary || []).filter((x) => x.dir).slice(0, 6)) M.push({ html: `${esc(x.text)}${tone(x)}`, href: NONG_SEC[x.tag] });
+  for (const n of news.slice(0, 4)) M.push({ html: `<span class="nong-tag">${esc(NONG_NEWS[n.key] || 'ข่าว')}</span>${esc(n.title)}`, link: n.link });
+  if (!M.length) M.push({ html: 'วันนี้ยังเงียบๆ อยู่นะ ดูภาพรวมก่อนไหม 😊', href: '#top' });
+  return M;
+}
+function nongSay(k) {
+  const b = $('#nongBubble'), m = nong.msgs[k % nong.msgs.length];
+  if (!m || !$('#nongPanel').hidden) return;
+  b.innerHTML = `<span class="who">น้องบอกว่า</span>${m.html}`;
+  b.onclick = () => { if (m.link) window.open(m.link, '_blank', 'noopener'); else if (m.href) { document.querySelector(m.href)?.scrollIntoView({ behavior: 'smooth' }); } else nongOpen(); b.classList.remove('show'); };
+  b.classList.add('show');
+  clearTimeout(nong.hideT); nong.hideT = setTimeout(() => b.classList.remove('show'), 7000);
+}
+function nongBadge() {
+  const n = nong.d ? nongNews(nong.d).filter((x) => (x.time || 0) > nongSince()).length : 0, el = $('#nongBadge');
+  el.hidden = !n; el.textContent = n > 9 ? '9+' : n;
+  $('#nongBtn').setAttribute('aria-label', n ? `มีข่าวใหม่ ${n} ข่าว เปิดดู` : 'เปิดข่าวล่าสุด');
+}
+function nongOpen() {
+  const d = nong.d; if (!d) return;
+  const since = nongSince(), news = nongNews(d).slice(0, 15);
+  const ago = (t) => { if (!t) return ''; const h = (Date.now() - t) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} นาทีก่อน` : h < 24 ? `${Math.round(h)} ชม.ก่อน` : `${Math.round(h / 24)} วันก่อน`; };
+  const say = (d.summary || []).filter((x) => x.dir).slice(0, 4);
+  $('#nongSub').textContent = `${news.filter((n) => (n.time || 0) > since).length || 'ไม่มี'}ข่าวใหม่ตั้งแต่ครั้งก่อน`.replace(/^(\d+)/, '$1 ');
+  $('#nongBody').innerHTML = (say.length ? `<div class="nong-say"><b>สรุปสั้นๆ ก่อนนะ</b><ul>${say.map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul></div>` : '') +
+    (news.length ? news.map((n) => `<a class="nong-item" href="${esc(n.link)}" target="_blank" rel="noopener">${(n.time || 0) > since ? '<span class="nong-new">ใหม่</span>' : ''}<span class="nong-tag">${esc(NONG_NEWS[n.key] || 'ข่าว')}</span>${esc(n.title)}<span class="m">${esc(n.source || '')}${n.time ? ' · ' + ago(n.time) : ''}</span></a>`).join('')
+      : '<div class="muted" style="padding:12px 0">ยังไม่มีข่าวตอนนี้</div>');
+  $('#nongJump').innerHTML = Object.entries(NONG_NEWS).filter(([k]) => document.getElementById('news-' + k))
+    .map(([k, t]) => `<a href="#news-${k}">ข่าว${t}ทั้งหมด</a>`).join('');
+  $('#nongPanel').hidden = false; $('#nongBtn').setAttribute('aria-expanded', 'true'); document.body.classList.add('nong-open');
+  $('#nongBubble').classList.remove('show');
+  nongSave({ seen: Date.now() }); nongBadge();
+}
+function nongClose() { $('#nongPanel').hidden = true; $('#nongBtn').setAttribute('aria-expanded', 'false'); document.body.classList.remove('nong-open'); }
+function nongShow(on) {
+  $('#nong').hidden = !on; $('#nongBack').hidden = on; if (!on) nongClose();
+  clearInterval(nong.timer);
+  if (on) {
+    setTimeout(() => nongSay(nong.i++), 1500);
+    nong.timer = setInterval(() => { if (!document.hidden) nongSay(nong.i++); }, 25000);
+  }
+}
+function nongUpdate(d) {
+  const first = !nong.d;
+  nong.d = d; nong.msgs = nongMessages(d); nongBadge();
+  if (first) nongShow(!nongState().hidden);
+}
+$('#nongBtn').onclick = () => $('#nongPanel').hidden ? nongOpen() : nongClose();
+$('#nongClose').onclick = nongClose;
+$('#nongX').onclick = (e) => { e.stopPropagation(); nongSave({ hidden: true }); nongShow(false); };
+$('#nongBack').onclick = () => { nongSave({ hidden: false }); nongShow(true); };
+$('#nongJump').onclick = (e) => { if (e.target.closest('a')) nongClose(); };
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !$('#nongPanel').hidden) nongClose(); });
+document.addEventListener('click', (e) => { if (!$('#nongPanel').hidden && !e.target.closest('#nongPanel, #nong')) nongClose(); });
+
 async function liveGold() {
   const s = lastData?.gold?.signal;
   if (!s?.ok || s.method !== 'ref' || !s.refSpot) return;
