@@ -1212,7 +1212,7 @@ function nongSay(k) {
   b.innerHTML = `<span class="who">น้องบอกว่า</span>${m.html}`;
   b.onclick = () => { if (m.link) window.open(m.link, '_blank', 'noopener'); else if (m.href) { document.querySelector(m.href)?.scrollIntoView({ behavior: 'smooth' }); } else nongOpen(); b.classList.remove('show'); };
   b.classList.add('show');
-  clearTimeout(nong.hideT); nong.hideT = setTimeout(() => b.classList.remove('show'), 7000);
+  clearTimeout(nong.hideT); nong.hideT = setTimeout(() => b.classList.remove('show'), 10000);
 }
 function nongBadge() {
   const n = nong.d ? nongNews(nong.d).filter((x) => (x.time || 0) > nongSince()).length : 0, el = $('#nongBadge');
@@ -1240,7 +1240,7 @@ function nongShow(on) {
   clearInterval(nong.timer);
   if (on) {
     setTimeout(() => nongSay(nong.i++), 1500);
-    nong.timer = setInterval(() => { if (!document.hidden) nongSay(nong.i++); }, 25000);
+    nong.timer = setInterval(() => { if (!document.hidden) nongSay(nong.i++); }, 20000);
   }
 }
 function nongUpdate(d) {
