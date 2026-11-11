@@ -176,6 +176,7 @@
   @media (max-width: 600px) { .cheer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; } .cheer-grid img:first-child { grid-column: 1 / -1; aspect-ratio: 4 / 5; } }
   /* ---------- น้องชวนดูข่าว ---------- */
   .nong { position: fixed; right: 18px; bottom: 18px; z-index: 50; display: flex; align-items: flex-end; gap: 10px; flex-direction: row-reverse; pointer-events: none; }
+  .nong[hidden], .nong-back[hidden] { display: none; }
   .nong > * { pointer-events: auto; }
   .nong-btn { position: relative; width: 64px; height: 64px; border-radius: 50%; padding: 0; border: 3px solid var(--surface-1); box-shadow: 0 4px 16px rgba(0,0,0,.22); cursor: pointer; background: var(--grid); flex: none; transition: transform .2s; }
   .nong-btn:hover { transform: scale(1.06); }
