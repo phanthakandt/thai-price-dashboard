@@ -182,7 +182,7 @@
       <div class="muted" id="refreshMsg" role="status" aria-live="polite"></div></div>
   </header>
   <nav class="topnav" aria-label="หมวด">
-    <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a>
+    <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#bonds">ตราสารหนี้</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a>
   </nav>
   <div id="banner"></div>
   <main class="grid" id="app"><div class="card span-12">กำลังโหลดข้อมูล…</div></main>
@@ -226,7 +226,7 @@ function drawLine(el, series, opt) {
   const bandPts = (opt.bands || []).flatMap((b) => b.points.flatMap((p) => [{ date: p.date, value: p.lo }, { date: p.date, value: p.hi }]));
   const all = series.flatMap((s) => s.points).concat(bandPts);
   if (!all.length) { el.innerHTML = '<div class="muted">ไม่มีข้อมูล</div>'; return; }
-  const dates = [...new Set(all.map((p) => p.date))].sort();
+  const dates = opt.order ? opt.order.filter((k) => all.some((p) => p.date === k)) : [...new Set(all.map((p) => p.date))].sort();
   const xi = new Map(dates.map((d, i) => [d, i]));
   let lo = Math.min(...all.map((p) => p.value)), hi = Math.max(...all.map((p) => p.value));
   if (opt.zero) { lo = Math.min(lo, 0); hi = Math.max(hi, 0); }
@@ -655,6 +655,49 @@ function energyCard(e) {
 }
 
 const WALLET_KEY = 'thai-price-wallet-v1';
+function bondCard(b) {
+  if (!b) return '';
+  if (!b.key) return b.status && !b.status.ok ? `<section class="card span-12" id="bonds"><h2>ตราสารหนี้</h2>${errBox(b.status)}</section>` : '';
+  // ผลตอบแทนขึ้น = ราคาพันธบัตรลง (ดีสำหรับคนจะซื้อใหม่ ไม่ดีสำหรับคนถืออยู่) จึงไม่ใส่สี ใส่สีเฉพาะผลต่อราคา
+  const bp = (v) => v == null ? '–' : `${v > 0.5 ? '+' : v < -0.5 ? '−' : ''}${Math.abs(Math.round(v))}`;
+  const pe = b.priceEffect.find((p) => p.tenor === '10Y');
+  return `<section class="card span-12" id="bonds">
+    <div class="card-head"><h2>ตราสารหนี้: อัตราผลตอบแทนพันธบัตรรัฐบาลไทย</h2><span class="muted">ThaiBMA · ข้อมูลวันที่ ${thDate(b.date)}</span></div>
+    ${insightBox(b.insights)}
+    <div class="grid" style="gap:16px">
+      <div class="span-7"><div class="explain" style="margin-top:0"><b>เส้นอัตราผลตอบแทน (% ต่อปี ตามอายุพันธบัตร)</b> เทียบกับ 1 เดือนและ 1 ปีก่อน</div><div class="chart" id="curveChart"></div></div>
+      <div class="span-5">
+        <table><tr><th>อายุ</th><th>ผลตอบแทน</th><th>1 วัน</th><th>1 เดือน</th><th>1 ปี</th></tr>
+          ${b.key.map((k) => `<tr><td>${k.tenor.replace('Y', ' ปี')}</td><td><b>${k.yield == null ? '–' : fmt(k.yield, 2)}%</b></td><td>${bp(k.d1)}</td><td>${bp(k.m1)}</td><td>${bp(k.y1)}</td></tr>`).join('')}
+        </table>
+        <div class="muted" style="margin-top:4px">การเปลี่ยนแปลงหน่วย bp (1 bp = 0.01%)</div>
+        <div class="stats" style="margin-top:12px">
+          <div class="stat"><div class="label">ส่วนต่าง 10 ปี − 2 ปี</div><div class="value">${b.slope.now == null ? '–' : Math.round(b.slope.now)} bp</div><div class="note">${b.slope.now < 0 ? 'กลับหัว' : b.slope.now < 50 ? 'ค่อนข้างแบน' : 'ชัน'}</div></div>
+          <div class="stat"><div class="label">ผลตอบแทนแท้จริง 10 ปี</div><div class="value">${b.real10 == null ? '–' : fmt(b.real10, 2) + '%'}</div><div class="note">หักเงินเฟ้อปีนี้ ${b.infl == null ? '–' : fmt(b.infl, 1) + '%'}</div></div>
+          ${pe ? `<div class="stat"><div class="label">ราคาพันธบัตร 10 ปี (ประมาณ)</div><div class="value">${sgnC(pe.m1, 1)}%</div><div class="note">ใน 1 เดือน · 1 ปี ${sgnC(pe.y1, 1)}%</div></div>` : ''}
+        </div>
+      </div>
+    </div>
+    <div class="explain">ผลตอบแทน (yield) กับราคาพันธบัตรเคลื่อนไหวสวนทางกัน เมื่อ yield ลด ราคาพันธบัตรเดิมจะสูงขึ้น กองทุนตราสารหนี้ที่ถือพันธบัตรระยะยาวจึงได้กำไร
+      ราคาโดยประมาณคำนวณจากดูเรชัน (5 ปี ≈ 4.8, 10 ปี ≈ 9.0) จึงเป็นค่าคร่าว ๆ ยังไม่รวมดอกเบี้ยรับ</div>
+  </section>`;
+}
+
+function bondSpreadCard(b) {
+  if (!b?.spread) return '';
+  const sp = b.spread;
+  return `<section class="card span-6">
+    <div class="card-head"><h2>พันธบัตร 10 ปี: ไทยเทียบสหรัฐ</h2><span class="muted">ThaiBMA · Yahoo (^TNX)</span></div>
+    <div class="stats">
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ไทย</div><div class="value">${fmt(sp.th10, 2)}%</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>สหรัฐ</div><div class="value">${fmt(sp.us10, 2)}%</div></div>
+      <div class="stat"><div class="label">ส่วนต่าง (ไทย − สหรัฐ)</div><div class="value">${sgnC(sp.now, 2)}</div><div class="note">จุดเปอร์เซ็นต์${sp.m1 != null ? ` · 1 เดือนก่อน ${sgn(sp.m1, 2)}` : ''}</div></div>
+    </div>
+    <div class="chart" id="spreadChart"></div>
+    <div class="explain">ถ้าไทยให้ผลตอบแทนต่ำกว่าสหรัฐมาก เงินลงทุนต่างชาติมีแนวโน้มไหลออกจากพันธบัตรไทย ซึ่งกดดันให้เงินบาทอ่อน ถ้าส่วนต่างแคบลง แรงกดดันก็ลดลง</div>
+  </section>`;
+}
+
 function walletCard() {
   return `<section class="card span-12" id="wallet">
     <div class="card-head"><h2>กระเป๋าเงินของคุณ</h2><span class="muted">ใส่ตัวเลขของคุณ ระบบคำนวณในเครื่องนี้ ไม่ส่งข้อมูลไปไหน</span></div>
@@ -819,10 +862,11 @@ async function load(manual = false) {
         แล้วราคาขายปลีกจะถูกปรับเป็นขั้นเมื่อแรงกดดันสะสมพอ แรงกดดันคิดจากต้นทุนที่เปลี่ยนไปตั้งแต่ปรับครั้งล่าสุด รวมกับภาระที่กองทุนอุดหนุนอยู่ เว็บนี้จึงบอก "ทิศทางที่น่าจะปรับ" ได้ดีกว่า "วันที่จะปรับ"
         การขยับของตลาดโลกหลังวันที่ของไฟล์ สนพ. ประมาณจากตลาดนิวยอร์ก (RBOB, ULSD) ดีเซลขึ้นกับนโยบายกองทุนน้ำมันมาก จึงคาดการณ์ได้ยากกว่า
       </div>` +
-      sec('invest', 'เงินออมและการลงทุน', 'ทอง ค่าเงิน และตลาดหุ้น') +
+      sec('invest', 'เงินออมและการลงทุน', 'ทอง ค่าเงิน ตราสารหนี้ และตลาดหุ้น') +
       signalGoldCard(d.gold) + goldCard(d.gold) +
       rangeCard(R('gold')) + rangeCard(R('usdthb')) +
       fxCard(d.fx) + stockCard(d.stocks) +
+      bondCard(d.bonds) + bondSpreadCard(d.bonds) + rangeCard(R('th10y')) +
       signalMarketCard(d) + rangeCard(R('set')) +
       sectorsCard(d.sectors) +
       newsCard(d.news, ['gold', 'stock', 'fx'], 'ข่าวทอง หุ้น และค่าเงิน') +
@@ -834,6 +878,21 @@ async function load(manual = false) {
       accuracyCard(d.accuracy) + archiveCard(d.archive);
 
     renderWallet(d);
+    if (d.bonds?.curves && $('#curveChart')) {
+      const order = ['1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '15Y', '20Y', '30Y'];
+      const [now, m1, y1] = d.bonds.curves;
+      lineChart($('#curveChart'), [
+        { name: now.label, short: 'ล่าสุด', color: '--series-1', points: now.points },
+        { name: m1.label, short: '1 เดือนก่อน', color: '--series-2', points: m1.points },
+        { name: y1.label, short: '1 ปีก่อน', color: '--series-3', points: y1.points },
+      ], { height: 230, order, xLabel: (t) => t.replace('M', ' เดือน').replace('Y', ' ปี'), format: (v) => fmt(v, 2) + '%', label: 'เส้นอัตราผลตอบแทนพันธบัตรรัฐบาลไทย' });
+    }
+    if (d.bonds?.spread && $('#spreadChart')) {
+      lineChart($('#spreadChart'), [
+        { name: 'ไทย 10 ปี', short: 'ไทย', color: '--series-1', points: d.bonds.spread.thHistory },
+        { name: 'สหรัฐ 10 ปี', short: 'สหรัฐ', color: '--series-2', points: d.bonds.spread.usHistory },
+      ], { height: 190, xLabel: thMonth, format: (v) => fmt(v, 2) + '%', label: 'พันธบัตร 10 ปี ไทยเทียบสหรัฐ' });
+    }
     if (d.energy?.ft?.history?.length && $('#ftChart')) {
       lineChart($('#ftChart'), [{ name: 'Ft', color: '--series-1', step: true, points: d.energy.ft.history.map((p) => ({ date: p.from + '-01', value: p.ft })) }],
         { height: 140, zero: true, xLabel: (x) => `${x.slice(5, 7)}/${String(+x.slice(0, 4) + 543).slice(2)}`, format: (v) => fmt(v, 2), label: 'ค่า Ft ย้อนหลัง' });
@@ -942,7 +1001,7 @@ setInterval(liveGold, 60 * 1000);
 $('#refresh').onclick = () => load(true);
 // ไฮไลต์เมนูตามหมวดที่กำลังอ่าน
 addEventListener('scroll', () => {
-  const ids = ['top', 'wallet', 'cost', 'invest', 'work', 'macro', 'accuracy'];
+  const ids = ['top', 'wallet', 'cost', 'invest', 'bonds', 'work', 'macro', 'accuracy'];
   let cur = 'top';
   for (const id of ids) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < 90) cur = id; }
   document.querySelectorAll('.topnav a').forEach((a) => a.classList.toggle('on', a.getAttribute('href') === '#' + cur));

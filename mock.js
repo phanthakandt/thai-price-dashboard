@@ -209,3 +209,17 @@ export async function fetchFt() {
     ['มกราคม – เมษายน 2569', '2026-01', '2026-04', 9.72], ['พฤษภาคม – สิงหาคม 2569', '2026-05', '2026-08', 16.23], ['กันยายน – ธันวาคม 2569', '2026-09', '2026-12', 16.23]];
   return { periods: p.map(([label, from, to, ft]) => ({ label, from, to, ft })), source: 'MOCK' };
 }
+export { BOND_TENORS, TENOR_YEARS } from './sources.js';
+export async function fetchThaiYields() {
+  const ten = { '1M': 0.86, '3M': 0.88, '6M': 0.9, '1Y': 0.94, '2Y': 1.17, '3Y': 1.31, '5Y': 1.56, '7Y': 1.77, '10Y': 1.99, '15Y': 2.43, '20Y': 2.9, '30Y': 3.15 };
+  const rows = [];
+  let shift = 0.35;
+  for (let i = 400; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 864e5); if (d.getUTCDay() === 0 || d.getUTCDay() === 6) continue;
+    shift += (rand() - 0.505) * 0.03;
+    const row = { date: d.toISOString().slice(0, 10) };
+    for (const [t, v] of Object.entries(ten)) row[t] = +(v + shift * (t.endsWith('M') ? 1.2 : 1)).toFixed(4);
+    rows.push(row);
+  }
+  return { rows, source: 'MOCK' };
+}

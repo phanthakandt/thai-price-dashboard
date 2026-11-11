@@ -401,3 +401,24 @@ export async function fetchFt() {
   rows.sort((a, b) => a.from.localeCompare(b.from));
   return { periods: rows.slice(-12), source: 'สำนักงาน กกพ. (erc.or.th)' };
 }
+
+// ---------- 14) อัตราผลตอบแทนพันธบัตรรัฐบาลไทย (ThaiBMA รายวัน แยกตามอายุ) ----------
+export const BOND_TENORS = ['1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '15Y', '20Y', '30Y'];
+export const TENOR_YEARS = { '1M': 1 / 12, '3M': 0.25, '6M': 0.5, '1Y': 1, '2Y': 2, '3Y': 3, '5Y': 5, '7Y': 7, '10Y': 10, '15Y': 15, '20Y': 20, '30Y': 30 };
+export async function fetchThaiYields() {
+  const y = new Date().getUTCFullYear();
+  const rows = [];
+  for (const year of [y - 1, y]) {
+    const j = await getJSON(`https://www.thaibma.or.th/yieldcurve/getintpttm?year=${year}`, { headers: { Referer: 'https://www.thaibma.or.th/EN/Market/YieldCurve/Government.aspx' } });
+    for (const r of Array.isArray(j) ? j : []) {
+      const date = String(r.asof || '').slice(0, 10);
+      if (!date) continue;
+      const row = { date };
+      for (const t of BOND_TENORS) row[t] = toNum(r[t]);
+      if (row['10Y'] != null) rows.push(row);
+    }
+  }
+  if (!rows.length) throw new Error('ไม่พบข้อมูลอัตราผลตอบแทนพันธบัตรจาก ThaiBMA');
+  rows.sort((a, b) => a.date.localeCompare(b.date));
+  return { rows, source: 'ThaiBMA (สมาคมตลาดตราสารหนี้ไทย)' };
+}
