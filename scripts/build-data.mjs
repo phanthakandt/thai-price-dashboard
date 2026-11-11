@@ -78,6 +78,11 @@ console.log('อาชีพ       ', ok(data.jobs.status), data.jobs.occupation
 console.log('กลุ่มธุรกิจ   ', `หุ้นดึงไม่ได้ ${data.sectors.failedStocks} ตัว`, data.sectors.sectors.map((x) => `${x.key}:${x.ok ? (x.verdict > 0 ? '+' : x.verdict < 0 ? '-' : '=') + `(${x.r3m?.toFixed(0)}%,flow ${x.flow?.toFixed(0)}%)` : 'X'}`).join(' '));
 for (const r of data.forecast?.ranges || []) console.log('คาดการณ์    ', r.key, 'ตอนนี้', r.now, '| σ/วัน', r.sigmaDaily.toFixed(2) + '%', '|', r.horizons.map((h) => `${h.days}d ${h.lo68.toFixed(2)}–${h.hi68.toFixed(2)}`).join(' '), `| ย้อนหลัง 68%:${Math.round(r.backtest.cover68 * 100)}% 95%:${Math.round(r.backtest.cover95 * 100)}% (n=${r.backtest.n})`);
 for (const o of data.forecast?.oil || []) console.log('คาดการณ์    ', o.key, `กลุ่ม ${o.bucket} n=${o.n} ปรับใน7วัน=${o.pChange?.toFixed(2)} ทางเดียวกัน=${o.pSameDir?.toFixed(2)} คาด=${o.expectedPrice?.toFixed(2)}`);
+const mx = data.macro;
+console.log('GDP เพื่อนบ้าน', mx?.countries ? mx.countries.map((c) => `${c.code} ${c.growth.join('/')}`).join(' | ') + ` · TH rank ${mx.rank?.pos}/${mx.rank?.of}` : mx?.status?.peers?.error);
+console.log('การค้าไทย  ', mx?.trade ? `${mx.trade.last.date} X ${(mx.trade.last.x / 1e3).toFixed(2)} M ${(mx.trade.last.m / 1e3).toFixed(2)} B ${(mx.trade.last.b / 1e3).toFixed(2)} bn$ · yoy ${mx.trade.xYoy?.toFixed(1)}% · ytd ${mx.trade.ytd.xG?.toFixed(1)}% · open ${mx.trade.openness?.toFixed(0)}%` : mx?.status?.trade?.error);
+console.log('การค้าเพื่อนบ้าน', (mx?.peerTrade || []).map((p) => `${p.code} ${p.date || '-'} ${p.xYoy?.toFixed(1) ?? '-'}%`).join(' | '));
+for (const l of mx?.insights || []) console.log('  •', l);
 const imf = data.forecast?.imf;
 console.log('IMF         ', imf?.status?.ok ? imf.years.join(',') + ' ' + imf.rows.map((r) => `${r.key} TH ${r.th.join('/')} WLD ${r.world.join('/')}`).join(' | ') : imf?.status?.error);
 console.log('ค่าไฟ/LPG    ', data.energy?.ft ? `Ft ${data.energy.ft.current.label} = ${data.energy.ft.current.ft}` : 'Ft: ' + data.energy?.status?.ft?.error, '|', data.energy?.lpg ? `LPG ${data.energy.lpg.perKg} บาท/กก. กองทุน ${data.energy.lpg.fund}` : 'LPG: ไม่มี');

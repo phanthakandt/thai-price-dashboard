@@ -204,6 +204,42 @@ export async function fetchImfOutlook() {
   }, source: 'MOCK' };
 }
 
+export { PEERS, PEER_INDICATORS } from './sources.js';
+export async function fetchPeersOutlook() {
+  const g = { THA: [2.0, 2.5, 2.4, 1.6, 2.0, 2.4], VNM: [5.1, 7.1, 7.0, 6.2, 6.5, 6.6], MYS: [3.6, 5.1, 4.5, 4.1, 4.0, 4.0], IDN: [5.0, 5.0, 4.9, 4.8, 4.9, 5.0],
+    PHL: [5.5, 5.7, 5.6, 5.4, 5.8, 6.0], SGP: [1.8, 4.4, 2.2, 1.8, 2.0, 2.3], KHM: [5.0, 6.0, 5.2, 4.5, 4.8, 5.5], LAO: [3.7, 4.3, 4.0, 3.5, 3.5, 3.6], MMR: [1.0, -1.1, -2.0, 1.5, 2.0, 2.5], WEOWORLD: [3.3, 3.3, 3.2, 3.0, 3.1, 3.2] };
+  const gdp = { THA: 526, VNM: 476, MYS: 422, IDN: 1396, PHL: 462, SGP: 547, KHM: 46, LAO: 16, MMR: 66 };
+  const pc = { THA: 7500, VNM: 4700, MYS: 12500, IDN: 4900, PHL: 4000, SGP: 90000, KHM: 2700, LAO: 2100, MMR: 1200 };
+  const ca = { THA: [1.4, 2.1, 3.0, 2.2, 2.0, 2.0], VNM: [5.8, 6.1, 4.0, 3.0, 2.5, 2.0], MYS: [1.5, 1.5, 2.0, 2.2, 2.3, 2.4], IDN: [-0.1, -0.6, -0.8, -1.0, -1.1, -1.2],
+    PHL: [-2.6, -3.8, -3.5, -3.2, -3.0, -2.8], SGP: [18, 17.5, 17, 16.5, 16, 15.5], KHM: [-1.6, -1.0, -2.5, -4.0, -4.5, -4.8], LAO: [-1, 0.5, 1, 0, -0.5, -1], MMR: [-2, -1.5, -1.8, -2, -2, -2] };
+  const yrs = [2023, 2024, 2025, 2026, 2027, 2028], obj = (a) => Object.fromEntries(yrs.map((y, i) => [y, a[i]]));
+  const out = { NGDP_RPCH: {}, NGDPD: {}, NGDPDPC: {}, BCA: {}, BCA_NGDPD: {} };
+  for (const c of Object.keys(g)) {
+    out.NGDP_RPCH[c] = obj(g[c]);
+    if (!gdp[c]) continue;
+    out.NGDPD[c] = obj(yrs.map((_, i) => gdp[c] * (1 + 0.04 * (i - 2))));
+    out.NGDPDPC[c] = obj(yrs.map((_, i) => pc[c] * (1 + 0.035 * (i - 2))));
+    out.BCA_NGDPD[c] = obj(ca[c]);
+    out.BCA[c] = obj(ca[c].map((v, i) => v * gdp[c] / 100 * (1 + 0.04 * (i - 2))));
+  }
+  return { data: out, source: 'MOCK' };
+}
+export async function fetchTradeMonthly() {
+  const base = { THA: [24000, 23500], VNM: [33000, 31000], MYS: [26000, 23000], IDN: [22000, 19000], PHL: [6500, 10500], SGP: [55000, 49000], KHM: [2200, 2500] };
+  const out = {};
+  for (const [c, [bx, bm]] of Object.entries(base)) {
+    const x = [], m = [];
+    for (let k = 0; k < 31; k++) {
+      const y = 2024 + Math.floor(k / 12), mo = (k % 12) + 1, date = `${y}-${String(mo).padStart(2, '0')}`;
+      const season = 1 + 0.06 * Math.sin((mo / 12) * 2 * Math.PI), trend = 1 + 0.008 * k;
+      x.push({ date, value: bx * season * trend * (0.95 + rand() * 0.1) });
+      m.push({ date, value: bm * season * (1 + 0.006 * k) * (0.95 + rand() * 0.1) });
+    }
+    out[c] = { x, m, b: x.map((p, i) => ({ date: p.date, value: p.value - m[i].value })) };
+  }
+  return { data: out, source: 'MOCK' };
+}
+
 export async function fetchFt() {
   const p = [['มกราคม – เมษายน 2568', '2025-01', '2025-04', 36.72], ['พฤษภาคม – สิงหาคม 2568', '2025-05', '2025-08', 19.72], ['กันยายน – ธันวาคม 2568', '2025-09', '2025-12', 15.72],
     ['มกราคม – เมษายน 2569', '2026-01', '2026-04', 9.72], ['พฤษภาคม – สิงหาคม 2569', '2026-05', '2026-08', 16.23], ['กันยายน – ธันวาคม 2569', '2026-09', '2026-12', 16.23]];

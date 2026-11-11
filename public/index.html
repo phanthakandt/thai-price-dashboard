@@ -126,6 +126,8 @@
   details summary { cursor: pointer; font-weight: 600; font-size: 14px; padding: 4px 0; }
   .fc-oil-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
   .fc-oil-h { margin-bottom: 6px; }
+  tr.me td { background: var(--grid); font-weight: 600; }
+  .bars rect:hover { opacity: .75; }
   .tbl-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
   @media (max-width: 600px) {
     .wrap { padding: 16px 10px 40px; }
@@ -305,6 +307,38 @@ function niceStep(raw) {
   const p = Math.pow(10, Math.floor(Math.log10(raw)));
   const n = raw / p;
   return (n < 1.5 ? 1 : n < 3 ? 2 : n < 7 ? 5 : 10) * p;
+}
+// กราฟแท่งบวก/ลบ (เช่น ดุลการค้า): บวก = เขียว ลบ = แดง
+function barChart(el, points, opt = {}) {
+  if (!el) return;
+  const draw = () => {
+    const W = el.clientWidth || 600, H = opt.height || 180, m = { t: 10, r: 12, b: 26, l: 48 };
+    if (!points.length) { el.innerHTML = '<div class="muted">ไม่มีข้อมูล</div>'; return; }
+    let lo = Math.min(0, ...points.map((p) => p.value)), hi = Math.max(0, ...points.map((p) => p.value));
+    const pad = (hi - lo) * 0.08 || 1; lo -= lo < 0 ? pad : 0; hi += pad;
+    const y = (v) => m.t + (1 - (v - lo) / (hi - lo)) * (H - m.t - m.b);
+    const bw = (W - m.l - m.r) / points.length, f = opt.format || ((v) => fmt(v, 1));
+    const step = niceStep((hi - lo) / 4);
+    let grid = '';
+    for (let k = Math.ceil(lo / step); k * step <= hi; k++) {
+      const v = Math.abs(k) < 1e-9 ? 0 : k * step;
+      grid += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="${css(v === 0 ? '--axis' : '--grid')}"/><text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${css('--text-muted')}">${f(v)}</text>`;
+    }
+    const bars = points.map((p, i) => {
+      const x0 = m.l + i * bw + bw * 0.15, y1 = y(Math.max(0, p.value)), h = Math.max(1, Math.abs(y(p.value) - y(0)));
+      return `<rect x="${x0.toFixed(1)}" y="${y1.toFixed(1)}" width="${(bw * 0.7).toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${css(p.value >= 0 ? '--good' : '--critical')}"><title>${opt.xLabel ? opt.xLabel(p.date) : p.date}: ${f(p.value)}</title></rect>`;
+    }).join('');
+    const xt = [0, Math.floor(points.length / 2), points.length - 1].map((i, k) =>
+      `<text x="${m.l + i * bw + bw / 2}" y="${H - 6}" font-size="11" fill="${css('--text-muted')}" text-anchor="${['start', 'middle', 'end'][k]}">${opt.xLabel ? opt.xLabel(points[i].date) : points[i].date}</text>`).join('');
+    el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(opt.label || '')}">${grid}<g class="bars">${bars}</g>${xt}</svg>`;
+  };
+  charts.push(draw); draw();
+  if ('ResizeObserver' in window) {
+    el._ro?.disconnect();
+    let lastW = el.clientWidth, t;
+    el._ro = new ResizeObserver(() => { const w = el.clientWidth; if (Math.abs(w - lastW) < 2) return; lastW = w; clearTimeout(t); t = setTimeout(draw, 80); });
+    el._ro.observe(el);
+  }
 }
 const thMonth = (d) => new Date(d).toLocaleDateString('th-TH', { month: 'short', year: '2-digit' });
 
@@ -634,6 +668,80 @@ function imfCard(imf) {
   </section>`;
 }
 
+const ymTh = (d) => `${['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'][+d.slice(5, 7) - 1]} ${String(+d.slice(0, 4) + 543).slice(2)}`;
+const bnUsd = (v) => fmt(v / 1000, 1); // ล้านดอลลาร์ → พันล้านดอลลาร์
+function tradeCard(mx) {
+  if (!mx) return '';
+  const t = mx.trade;
+  if (!t) return mx.status?.trade && !mx.status.trade.ok ? `<section class="card span-12"><h2>ส่งออก นำเข้า และดุลการค้าของไทย</h2>${errBox(mx.status.trade)}</section>` : '';
+  const l = t.last, thb = (v) => mx.fx ? `ราว ${Math.round(v * mx.fx / 1000).toLocaleString('th-TH')} พันล้านบาท` : '';
+  const bal = (v) => `<span class="${v >= 0 ? 'up' : 'down'}">${v >= 0 ? 'เกินดุล' : 'ขาดดุล'} ${bnUsd(Math.abs(v))}</span>`;
+  return `<section class="card span-12" id="trade">
+    <div class="card-head"><h2>ส่งออก นำเข้า และดุลการค้าของไทย (สินค้า)</h2><span class="muted">IMF IMTS · ข้อมูลถึง ${ymTh(l.date)} · หน่วย พันล้านดอลลาร์</span></div>
+    ${errBox(mx.status.trade)}
+    <div class="stats">
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-1)"></span>ส่งออก ${ymTh(l.date)}</div><div class="value">${bnUsd(l.x)}</div>
+        <div class="note">${thb(l.x)} · เทียบปีก่อน ${t.xYoy == null ? '–' : sgnC(t.xYoy, 1) + '%'}</div></div>
+      <div class="stat"><div class="label"><span class="chip" style="background:var(--series-2)"></span>นำเข้า ${ymTh(l.date)}</div><div class="value">${bnUsd(l.m)}</div>
+        <div class="note">${thb(l.m)} · เทียบปีก่อน ${t.mYoy == null ? '–' : sgn(t.mYoy, 1) + '%'}</div></div>
+      <div class="stat"><div class="label">ดุลการค้า ${ymTh(l.date)}</div><div class="value">${bal(l.b)}</div><div class="note">${thb(Math.abs(l.b))}</div></div>
+      <div class="stat"><div class="label">ตั้งแต่ต้นปี (${t.months} เดือน)</div><div class="value">${t.ytd.xG == null ? '–' : sgnC(t.ytd.xG, 1) + '%'}</div>
+        <div class="note">ส่งออกโต · นำเข้า ${t.ytd.mG == null ? '–' : sgn(t.ytd.mG, 1) + '%'} · ${bal(t.ytd.b)}</div></div>
+    </div>
+    ${insightBox(mx.insights?.filter((x) => /ส่งออก|นำเข้า|การค้า/.test(x)))}
+    <div class="grid" style="margin-top:8px">
+      <div class="span-7"><div class="explain"><b>ส่งออกเทียบนำเข้า รายเดือน (พันล้านดอลลาร์)</b></div><div class="chart" id="tradeChart"></div></div>
+      <div class="span-5"><div class="explain"><b>ดุลการค้ารายเดือน</b> <span class="up">■ เกินดุล</span> <span class="down">■ ขาดดุล</span></div><div class="chart" id="tradeBal"></div></div>
+    </div>
+    <div class="explain">ส่งออกคือรายได้ที่ไทยขายสินค้าให้ต่างประเทศ นำเข้าคือที่ซื้อจากต่างประเทศ (รวมน้ำมันดิบ วัตถุดิบ และชิ้นส่วนที่นำมาผลิตเพื่อส่งออกต่อ)
+      ส่งออกมากกว่านำเข้าเรียกว่า "เกินดุลการค้า" เงินดอลลาร์ไหลเข้าประเทศ ช่วยให้บาทแข็ง ถ้านำเข้ามากกว่าเรียกว่า "ขาดดุล"
+      ตัวเลขของ IMF มาจากกระทรวงพาณิชย์และกรมศุลกากรของแต่ละประเทศ จึงช้ากว่าที่กระทรวงพาณิชย์ประกาศเองราว 1–2 เดือน
+      ยอดส่งออกและนำเข้าแกว่งตามฤดูกาล จึงเทียบกับเดือนเดียวกันของปีก่อน</div>
+  </section>`;
+}
+function peersCard(mx) {
+  if (!mx) return '';
+  if (!mx.countries) return mx.status?.peers && !mx.status.peers.ok ? `<section class="card span-12"><h2>GDP ไทยเทียบเพื่อนบ้าน</h2>${errBox(mx.status.peers)}</section>` : '';
+  const ys = mx.years, pf = mx.projectedFrom, ia = ys.indexOf(mx.actualYear);
+  const yh = (y) => `<th>${y >= pf ? '<span class="badge">คาดการณ์</span><br>' : ''}${+y + 543}</th>`;
+  const cell = (v, d = 1) => `<td>${v == null ? '–' : fmt(v, d)}</td>`;
+  const sorted = [...mx.countries].sort((a, b) => (b.gdp ?? 0) - (a.gdp ?? 0));
+  return `<section class="card span-12" id="peers">
+    <div class="card-head"><h2>GDP ไทยเทียบเพื่อนบ้าน</h2><span class="muted">IMF World Economic Outlook · ตัวเลขตั้งแต่ปี ${+pf + 543} เป็นการคาดการณ์</span></div>
+    ${errBox(mx.status.peers)}
+    ${insightBox(mx.insights?.filter((x) => /^IMF คาด|ดุลบัญชี/.test(x)))}
+    <div class="explain" style="margin-top:8px"><b>GDP เติบโต (% ต่อปี)</b> — เศรษฐกิจขยายตัวเร็วแค่ไหน</div>
+    <table><tr><th>ประเทศ</th>${ys.map(yh).join('')}</tr>
+      ${mx.countries.map((c) => `<tr class="${c.code === 'THA' ? 'me' : ''}"><td>${esc(c.name)}</td>${c.growth.map((v) => `<td>${v == null ? '–' : sgnC(v, 1)}</td>`).join('')}</tr>`).join('')}
+      ${mx.world?.some((v) => v != null) ? `<tr><td class="muted">เศรษฐกิจโลก</td>${mx.world.map((v) => `<td class="muted">${v == null ? '–' : fmt(v, 1)}</td>`).join('')}</tr>` : ''}
+    </table>
+    <div class="explain" style="margin-top:14px"><b>ขนาดเศรษฐกิจและดุลบัญชีเดินสะพัด ปี ${+mx.actualYear + 543}</b> (เรียงตามขนาด GDP)</div>
+    <table><tr><th>ประเทศ</th><th>GDP<br><span class="muted">พันล้าน$</span></th><th>GDP ต่อหัว<br><span class="muted">$/คน/ปี</span></th><th>ดุลบัญชีเดินสะพัด<br><span class="muted">% GDP</span></th><th class="hide-sm">ดุลบัญชีฯ ปี ${+pf + 543}<br><span class="muted">คาดการณ์ % GDP</span></th></tr>
+      ${sorted.map((c) => `<tr class="${c.code === 'THA' ? 'me' : ''}"><td>${esc(c.name)}</td>${cell(c.gdp, 0)}<td>${c.gdppc == null ? '–' : fmt(c.gdppc, 0)}${c.gdppc && mx.fx ? `<div class="muted">≈${fmt(c.gdppc * mx.fx / 12, 0)} บาท/เดือน</div>` : ''}</td>
+        <td>${c.ca[ia] == null ? '–' : sgnC(c.ca[ia], 1)}</td><td class="hide-sm">${c.ca[ys.indexOf(pf)] == null ? '–' : sgnC(c.ca[ys.indexOf(pf)], 1)}</td></tr>`).join('')}
+    </table>
+    <div class="explain"><b>ดุลบัญชีเดินสะพัด</b> = ดุลการค้าสินค้า + ดุลบริการ (รวมรายได้ท่องเที่ยว) + รายได้และเงินโอนจากต่างประเทศ
+      ค่าบวก (เกินดุล) แปลว่าประเทศได้เงินตราต่างประเทศเข้ามามากกว่าที่จ่ายออกไป ค่าลบ (ขาดดุล) ต้องพึ่งเงินทุนจากต่างประเทศ
+      GDP ต่อหัวเป็นค่าเฉลี่ยทั้งประเทศ ไม่ใช่รายได้ของคนทั่วไป ตัวเลข "บาท/เดือน" แปลงด้วยค่าเงินวันนี้เพื่อให้เห็นภาพเท่านั้น</div>
+  </section>`;
+}
+function peerTradeCard(mx) {
+  const rows = (mx?.peerTrade || []).filter((p) => p.x != null);
+  if (rows.length < 2) return '';
+  rows.sort((a, b) => (b.xYoy ?? -1e9) - (a.xYoy ?? -1e9));
+  return `<section class="card span-12">
+    <div class="card-head"><h2>การส่งออกของไทยเทียบเพื่อนบ้าน</h2><span class="muted">IMF IMTS · เรียงตามการเติบโตเดือนล่าสุด · พันล้านดอลลาร์</span></div>
+    <table><tr><th>ประเทศ</th><th>เดือนล่าสุด</th><th>ส่งออก</th><th>เทียบปีก่อน</th><th>ตั้งแต่ต้นปี</th><th class="hide-sm">ดุลการค้าตั้งแต่ต้นปี</th><th class="hide-sm">ส่งออก 12 เดือน</th></tr>
+      ${rows.map((p) => `<tr class="${p.code === 'THA' ? 'me' : ''}"><td>${esc(p.name)}</td><td class="muted">${ymTh(p.date)}</td><td>${bnUsd(p.x)}</td>
+        <td>${p.xYoy == null ? '–' : sgnC(p.xYoy, 1) + '%'}</td><td>${p.ytdXG == null ? '–' : sgnC(p.ytdXG, 1) + '%'}</td>
+        <td class="hide-sm">${p.ytdB == null ? '–' : `<span class="${p.ytdB >= 0 ? 'up' : 'down'}">${p.ytdB >= 0 ? 'เกิน' : 'ขาด'} ${bnUsd(Math.abs(p.ytdB))}</span>`}</td><td class="hide-sm">${bnUsd(p.r12x)}</td></tr>`).join('')}
+    </table>
+    <div class="explain">เพื่อนบ้านแข่งกับไทยในตลาดส่งออกเดียวกัน (อิเล็กทรอนิกส์ ชิ้นส่วนยานยนต์ สินค้าเกษตร) ถ้าเพื่อนบ้านส่งออกโตเร็วกว่าไทยต่อเนื่อง
+      แปลว่าไทยอาจเสียส่วนแบ่งตลาด แต่ถ้าทุกประเทศโตพร้อมกัน แสดงว่าความต้องการของโลกเพิ่มขึ้น แต่ละประเทศรายงานช้าเร็วต่างกัน ให้ดูคอลัมน์ "เดือนล่าสุด" ประกอบ
+      ลาวและเมียนมาไม่มีข้อมูลรายเดือนใน IMF</div>
+  </section>`;
+}
+
 function energyCard(e) {
   if (!e) return '';
   const l = e.lpg, ft = e.ft;
@@ -872,12 +980,22 @@ async function load(manual = false) {
       newsCard(d.news, ['gold', 'stock', 'fx'], 'ข่าวทอง หุ้น และค่าเงิน') +
       sec('work', 'งานและรายได้', 'การว่างงาน และงานกลุ่มไหนกำลังโตหรือหด') +
       unemploymentCard(d.unemployment) + jobsCard(d.jobs) +
-      sec('macro', 'ภาพรวมเศรษฐกิจ', 'ประมาณการของ IMF ไทยเทียบโลก') +
+      sec('macro', 'ภาพรวมเศรษฐกิจ', 'GDP การส่งออก นำเข้า ดุลการค้า ไทยเทียบเพื่อนบ้านและโลก') +
+      tradeCard(d.macro) + peersCard(d.macro) + peerTradeCard(d.macro) +
       imfCard(d.forecast?.imf) +
       sec('accuracy', 'ความแม่นและย้อนหลัง', 'ตรวจว่าที่ระบบเคยบอก ถูกแค่ไหน') +
       accuracyCard(d.accuracy) + archiveCard(d.archive);
 
     renderWallet(d);
+    const tr = d.macro?.trade;
+    if (tr && $('#tradeChart')) {
+      const rows = tr.rows.slice(-24), pt = (k) => rows.map((r) => ({ date: r.date, value: r[k] / 1000 }));
+      lineChart($('#tradeChart'), [
+        { name: 'ส่งออก', color: '--series-1', points: pt('x') },
+        { name: 'นำเข้า', color: '--series-2', points: pt('m') },
+      ], { xLabel: ymTh, format: (v) => fmt(v, 1), label: 'ส่งออกและนำเข้ารายเดือน' });
+      barChart($('#tradeBal'), pt('b'), { xLabel: ymTh, format: (v) => fmt(v, 1), label: 'ดุลการค้ารายเดือน' });
+    }
     if (d.bonds?.curves && $('#curveChart')) {
       const order = ['1M', '3M', '6M', '1Y', '2Y', '3Y', '5Y', '7Y', '10Y', '15Y', '20Y', '30Y'];
       const [now, m1, y1] = d.bonds.curves;

@@ -14,7 +14,7 @@ export const LITRE_PER_BARREL = 158.987294928;
 async function getJSON(url, opts = {}) {
   const res = await fetch(url, {
     headers: { 'User-Agent': UA, Accept: 'application/json', ...(opts.headers || {}) },
-    signal: AbortSignal.timeout(15000),
+    signal: AbortSignal.timeout(opts.timeout || 15000),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status} จาก ${new URL(url).host}`);
   return res.json();
@@ -371,6 +371,48 @@ export async function fetchImfOutlook() {
   }
   if (!Object.keys(out.NGDP_RPCH.THA).length) throw new Error('ไม่พบข้อมูลประมาณการของ IMF สำหรับไทย');
   return { data: out, source: 'IMF World Economic Outlook' };
+}
+
+// ---------- 12b) GDP และดุลบัญชีเดินสะพัด: ไทยเทียบเพื่อนบ้าน (IMF DataMapper, รายปี + ประมาณการ) ----------
+export const PEERS = { THA: 'ไทย', VNM: 'เวียดนาม', MYS: 'มาเลเซีย', IDN: 'อินโดนีเซีย', PHL: 'ฟิลิปปินส์', SGP: 'สิงคโปร์', KHM: 'กัมพูชา', LAO: 'ลาว', MMR: 'เมียนมา' };
+export const PEER_INDICATORS = {
+  NGDP_RPCH: 'GDP เติบโต (%)',
+  NGDPD: 'ขนาด GDP (พันล้านดอลลาร์)',
+  NGDPDPC: 'GDP ต่อหัว (ดอลลาร์)',
+  BCA: 'ดุลบัญชีเดินสะพัด (พันล้านดอลลาร์)',
+  BCA_NGDPD: 'ดุลบัญชีเดินสะพัด (% ของ GDP)',
+};
+export async function fetchPeersOutlook() {
+  const codes = [...Object.keys(PEERS), 'WEOWORLD'], y0 = new Date().getUTCFullYear(), out = {};
+  for (const ind of Object.keys(PEER_INDICATORS)) {
+    // API คืนทุกประเทศเสมอ (~150KB) จึงเลือกเฉพาะประเทศที่ใช้ และปี y0−6 ถึง y0+3
+    const j = await getJSON(`https://www.imf.org/external/datamapper/api/v1/${ind}/${codes.join('/')}`, { timeout: 40000 });
+    const v = j?.values?.[ind] || {};
+    out[ind] = Object.fromEntries(codes.filter((c) => v[c]).map((c) => [c,
+      Object.fromEntries(Object.entries(v[c]).filter(([y]) => +y >= y0 - 6 && +y <= y0 + 3))]));
+  }
+  if (!out.NGDP_RPCH?.THA) throw new Error('ไม่พบข้อมูล GDP ของไทยจาก IMF');
+  return { data: out, source: 'IMF World Economic Outlook (DataMapper)' };
+}
+
+// ---------- 12c) ส่งออก นำเข้า ดุลการค้า รายเดือน (IMF International Trade in Goods, ข้อมูลจากหน่วยงานของแต่ละประเทศ) ----------
+export async function fetchTradeMonthly() {
+  const y = new Date().getUTCFullYear(), codes = Object.keys(PEERS);
+  const url = `https://api.imf.org/external/sdmx/2.1/data/IMF.STA,IMTS/${codes.join('+')}.XG_FOB_USD+MG_CIF_USD+TBG_USD.G001.M?startPeriod=${y - 3}-01`;
+  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/xml' }, signal: AbortSignal.timeout(60000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status} จาก api.imf.org`);
+  const xml = await res.text();
+  const KEY = { XG_FOB_USD: 'x', MG_CIF_USD: 'm', TBG_USD: 'b' }, out = {};
+  for (const [, attrs, body] of xml.matchAll(/<Series ([^>]*)>([\s\S]*?)<\/Series>/g)) {
+    const c = attrs.match(/COUNTRY="([A-Z]+)"/)?.[1], k = KEY[attrs.match(/INDICATOR="([A-Z_]+)"/)?.[1]];
+    if (!c || !k) continue;
+    const pts = [...body.matchAll(/TIME_PERIOD="(\d{4})-M(\d{2})"[^>]*?OBS_VALUE="([-\d.Ee+]+)"/g)]
+      .map(([, yy, mm, v]) => ({ date: `${yy}-${mm}`, value: +v / 1e6 })).filter((p) => Number.isFinite(p.value));
+    // ล้านดอลลาร์ เรียงตามเดือน
+    (out[c] ??= {})[k] = pts.sort((a, b) => a.date.localeCompare(b.date));
+  }
+  if (!out.THA?.x?.length) throw new Error('ไม่พบข้อมูลการส่งออกของไทยจาก IMF');
+  return { data: out, source: 'IMF International Trade in Goods (IMTS)' };
 }
 
 // ---------- 13) ค่าไฟฟ้าผันแปร (Ft) จากหน้าเว็บ กกพ. (ปรับทุก 4 เดือน หน่วย สตางค์/หน่วย) ----------
