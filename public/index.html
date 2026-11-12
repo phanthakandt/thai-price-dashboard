@@ -139,6 +139,7 @@
     table { font-size: 13px; }
     th, td { padding: 6px 4px; white-space: normal; }
     .hide-sm { display: none; }
+    div.show-sm { display: block; }
     .card-head { flex-wrap: wrap; }
     .pill { font-size: 14px; padding: 7px 10px; }
     .summary .tag { flex-basis: 62px; }
@@ -173,6 +174,10 @@
   .cheer h2 { font-size: 16px; margin: 0 0 4px; }
   .cheer-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
   .cheer-grid img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; object-position: 50% 30%; border-radius: 14px; display: block; background: var(--grid); }
+  .show-sm { display: none; }
+  details.more { margin-top: 10px; }
+  details.more summary { cursor: pointer; font-size: 13px; color: var(--text-secondary); padding: 6px 0; }
+  table.goods td .muted { font-size: 11.5px; }
   .cheer-item { position: relative; }
   .cheer:focus { outline: none; }
   .topnav a.nav-cheer { color: #d6336c; font-weight: 600; }
@@ -790,6 +795,46 @@ function tradeCard(mx) {
       ยอดส่งออกและนำเข้าแกว่งตามฤดูกาล จึงเทียบกับเดือนเดียวกันของปีก่อน</div>
   </section>`;
 }
+function goodsCard(g) {
+  if (!g) return '';
+  if (!g.month) return g.status && !g.status.ok ? `<section class="card span-12"><h2>ส่งออกและนำเข้าแยกตามกลุ่มสินค้า</h2>${errBox(g.status)}</section>` : '';
+  const pd = ymTh(g.period), v = (x) => x == null ? '–' : bnUsd(x);
+  const yoy = (x) => x == null ? '<span class="muted">–</span>' : sgnC(x, 1) + '%';
+  const yoyM = (x) => x == null ? '<span class="muted">–</span>' : sgn(x, 1) + '%'; // นำเข้าเพิ่มไม่ได้แปลว่าดีหรือแย่ จึงไม่ใส่สี
+  const bal = (b) => `<span class="${b >= 0 ? 'up' : 'down'}">${b >= 0 ? '+' : '−'}${bnUsd(Math.abs(b))}</span>`;
+  const table = (view) => {
+    const max = Math.max(...view.groups.map((x) => Math.abs(x.b)), 1);
+    return `<table class="goods"><tr><th>กลุ่มสินค้า</th><th>ส่งออก</th><th class="hide-sm">เทียบปีก่อน</th><th>นำเข้า</th><th class="hide-sm">เทียบปีก่อน</th><th>ดุล</th><th class="hide-sm" style="width:22%">เกินดุล / ขาดดุล</th></tr>
+      ${view.groups.map((x) => `<tr><td>${esc(x.name)}${x.note ? `<div class="muted">${esc(x.note)}</div>` : ''}</td>
+        <td>${v(x.x)}<div class="muted show-sm">${yoy(x.xYoy)}</div></td><td class="hide-sm">${yoy(x.xYoy)}</td>
+        <td>${v(x.m)}<div class="muted show-sm">${yoyM(x.mYoy)}</div></td><td class="hide-sm">${yoyM(x.mYoy)}</td>
+        <td>${bal(x.b)}</td>
+        <td class="hide-sm"><div class="dbar"><div style="${x.b >= 0 ? `left:50%;width:${(x.b / max) * 50}%` : `right:50%;width:${(-x.b / max) * 50}%`};background:var(${x.b >= 0 ? '--good' : '--critical'})"></div></div></td></tr>`).join('')}
+      <tr class="me"><td>รวมทั้งหมด</td><td>${v(view.total.x)}</td><td class="hide-sm">${yoy(view.total.xYoy)}</td><td>${v(view.total.m)}</td><td class="hide-sm">${yoyM(view.total.mYoy)}</td><td>${bal(view.total.b)}</td><td class="hide-sm"></td></tr>
+    </table>
+    <details class="more"><summary>ดูรายหมวดสินค้าย่อย (HS 2 หลัก) 20 อันดับแรก</summary>
+      <table><tr><th>หมวด</th><th>ส่งออก</th><th>นำเข้า</th><th>ดุล</th><th class="hide-sm">ส่งออกเทียบปีก่อน</th></tr>
+      ${view.chapters.map((c) => `<tr><td><span class="muted">${c.c}</span> ${esc(c.name)}</td><td>${v(c.x)}</td><td>${v(c.m)}</td><td>${bal(c.b)}</td><td class="hide-sm">${yoy(c.xYoy)}</td></tr>`).join('')}</table>
+    </details>`;
+  };
+  const t = g.ytd ? g.ytd.total : g.month.total;
+  return `<section class="card span-12" id="goods">
+    <div class="card-head"><h2>ส่งออกและนำเข้าแยกตามกลุ่มสินค้า</h2><span class="muted">UN Comtrade (ข้อมูลศุลกากร) · ข้อมูลถึง ${pd} · พันล้านดอลลาร์</span></div>
+    ${g.status?.pending ? `<div class="explain">⏳ กำลังทยอยดึงข้อมูลย้อนหลังอีก ${g.status.pending} เดือน ยอดตั้งแต่ต้นปีจะแสดงเมื่อครบ</div>` : ''}
+    <div class="stats">
+      <div class="stat"><div class="label">ส่งออก${g.ytd ? ' ตั้งแต่ต้นปี' : ' ' + pd}</div><div class="value">${v(t.x)}</div><div class="note">เทียบปีก่อน ${yoy(t.xYoy)}</div></div>
+      <div class="stat"><div class="label">นำเข้า${g.ytd ? ' ตั้งแต่ต้นปี' : ' ' + pd}</div><div class="value">${v(t.m)}</div><div class="note">เทียบปีก่อน ${yoyM(t.mYoy)}</div></div>
+      <div class="stat"><div class="label">ดุลการค้า</div><div class="value">${bal(t.b)}</div><div class="note">${t.b >= 0 ? 'เกินดุล' : 'ขาดดุล'}${t.bPrev != null ? ` · ปีก่อน ${t.bPrev >= 0 ? 'เกิน' : 'ขาด'} ${bnUsd(Math.abs(t.bPrev))}` : ''}</div></div>
+    </div>
+    ${insightBox(g.insights)}
+    <div class="tabs" role="tablist">${g.ytd ? `<button class="tab on" data-t="gytd">ตั้งแต่ต้นปี (${g.months} เดือน)</button>` : ''}<button class="tab${g.ytd ? '' : ' on'}" data-t="gmonth">เดือน ${pd}</button></div>
+    ${g.ytd ? `<div data-p="gytd">${table(g.ytd)}</div>` : ''}<div data-p="gmonth"${g.ytd ? ' hidden' : ''}>${table(g.month)}</div>
+    <div class="explain">ดุล = ส่งออก − นำเข้า ค่าบวก (เขียว) คือไทยขายออกมากกว่าซื้อเข้า ค่าลบ (แดง) คือซื้อเข้ามากกว่า
+      "เทียบปีก่อน" เทียบกับช่วงเดียวกันของปีที่แล้ว ไม่ใช่เดือนก่อน เพราะการค้าขึ้นลงตามฤดูกาล
+      กลุ่มอิเล็กทรอนิกส์มักนำเข้าสูงเพราะไทยนำเข้าชิปและชิ้นส่วนมาประกอบแล้วส่งออกต่อ ส่วนน้ำมันขาดดุลเสมอเพราะไทยผลิตน้ำมันดิบเองได้น้อย
+      ตัวเลขจาก UN Comtrade ช้ากว่าที่กระทรวงพาณิชย์ประกาศราว 4–5 เดือน และยอดรวมอาจต่างจากตัวเลข IMF ด้านบนเล็กน้อย เพราะนับคนละวิธี</div>
+  </section>`;
+}
 function peersCard(mx) {
   if (!mx) return '';
   if (!mx.countries) return mx.status?.peers && !mx.status.peers.ok ? `<section class="card span-12"><h2>GDP ไทยเทียบเพื่อนบ้าน</h2>${errBox(mx.status.peers)}</section>` : '';
@@ -1072,7 +1117,7 @@ async function load(manual = false) {
       sec('work', 'งานและรายได้', 'การว่างงาน และงานกลุ่มไหนกำลังโตหรือหด') +
       unemploymentCard(d.unemployment) + jobsCard(d.jobs) +
       sec('macro', 'ภาพรวมเศรษฐกิจ', 'GDP การส่งออก นำเข้า ดุลการค้า ไทยเทียบเพื่อนบ้านและโลก') +
-      tradeCard(d.macro) + peersCard(d.macro) + peerTradeCard(d.macro) +
+      tradeCard(d.macro) + goodsCard(d.macro?.goods) + peersCard(d.macro) + peerTradeCard(d.macro) +
       newsCard(d.news, ['econ'], 'ข่าวเศรษฐกิจและการค้า') +
       imfCard(d.forecast?.imf) +
       sec('accuracy', 'ความแม่นและย้อนหลัง', 'ตรวจว่าที่ระบบเคยบอก ถูกแค่ไหน') +

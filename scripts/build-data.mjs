@@ -83,6 +83,10 @@ console.log('GDP เพื่อนบ้าน', mx?.countries ? mx.countries.m
 console.log('การค้าไทย  ', mx?.trade ? `${mx.trade.last.date} X ${(mx.trade.last.x / 1e3).toFixed(2)} M ${(mx.trade.last.m / 1e3).toFixed(2)} B ${(mx.trade.last.b / 1e3).toFixed(2)} bn$ · yoy ${mx.trade.xYoy?.toFixed(1)}% · ytd ${mx.trade.ytd.xG?.toFixed(1)}% · open ${mx.trade.openness?.toFixed(0)}%` : mx?.status?.trade?.error);
 console.log('การค้าเพื่อนบ้าน', (mx?.peerTrade || []).map((p) => `${p.code} ${p.date || '-'} ${p.xYoy?.toFixed(1) ?? '-'}%`).join(' | '));
 for (const l of mx?.insights || []) console.log('  •', l);
+const gd = mx?.goods;
+console.log('สินค้าแยกกลุ่ม', gd?.month ? `${gd.period} ytd=${!!gd.ytd} fetched ${gd.status.fetched} pending ${gd.status.pending} ${gd.status.errors?.join('; ') || ''}` : gd?.status?.error);
+for (const g of (gd?.ytd || gd?.month)?.groups || []) console.log(`   ${g.name}: X ${(g.x / 1e3).toFixed(2)} (${g.xYoy?.toFixed(1)}%) M ${(g.m / 1e3).toFixed(2)} B ${(g.b / 1e3).toFixed(2)}`);
+for (const l of gd?.insights || []) console.log('  •', l);
 const imf = data.forecast?.imf;
 console.log('IMF         ', imf?.status?.ok ? imf.years.join(',') + ' ' + imf.rows.map((r) => `${r.key} TH ${r.th.join('/')} WLD ${r.world.join('/')}`).join(' | ') : imf?.status?.error);
 console.log('ค่าไฟ/LPG    ', data.energy?.ft ? `Ft ${data.energy.ft.current.label} = ${data.energy.ft.current.ft}` : 'Ft: ' + data.energy?.status?.ft?.error, '|', data.energy?.lpg ? `LPG ${data.energy.lpg.perKg} บาท/กก. กองทุน ${data.energy.lpg.fund}` : 'LPG: ไม่มี');

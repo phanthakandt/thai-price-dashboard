@@ -415,6 +415,40 @@ export async function fetchTradeMonthly() {
   return { data: out, source: 'IMF International Trade in Goods (IMTS)' };
 }
 
+// ---------- 12d) ส่งออก/นำเข้าแยกหมวดสินค้า (UN Comtrade, รายเดือน, HS 2 หลัก) ----------
+// API สาธารณะไม่ต้องใช้ key แต่จำกัด 1 เดือนต่อคำขอ และต้องเว้นระยะ (โดน 429 ถ้าถี่เกิน)
+const COMTRADE = 'https://comtradeapi.un.org/public/v1';
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+async function comtradeJSON(url) {
+  for (let i = 0; i < 4; i++) {
+    const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'application/json' }, signal: AbortSignal.timeout(45000) });
+    if (res.status === 429) { await sleepMs(5000 + i * 3000); continue; }
+    if (!res.ok) throw new Error(`HTTP ${res.status} จาก comtradeapi.un.org`);
+    return res.json();
+  }
+  throw new Error('UN Comtrade จำกัดความถี่ (429) ลองใหม่รอบหน้า');
+}
+export async function fetchGoodsPeriods() {
+  const j = await comtradeJSON(`${COMTRADE}/getDA/C/M/HS?reporterCode=764`);
+  const per = [...new Set((j.data || []).map((d) => String(d.period)))].sort();
+  if (!per.length) throw new Error('ไม่พบช่วงเวลาที่มีข้อมูลของไทยใน UN Comtrade');
+  return per.slice(-30);
+}
+export async function fetchGoodsMonth(period) {
+  await sleepMs(4000); // เว้นระยะระหว่างคำขอ
+  const j = await comtradeJSON(`${COMTRADE}/preview/C/M/HS?reporterCode=764&period=${period}&partnerCode=0&flowCode=X,M&cmdCode=AG2&includeDesc=true`);
+  const rows = {};
+  for (const r of j.data || []) {
+    if (r.partnerCode !== 0 || r.motCode !== 0 || r.customsCode !== 'C00') continue;
+    const c = String(r.cmdCode).padStart(2, '0'), k = r.flowCode === 'X' ? 'x' : r.flowCode === 'M' ? 'm' : null;
+    if (!k || !Number.isFinite(r.primaryValue)) continue;
+    (rows[c] ??= { c, desc: r.cmdDesc, x: 0, m: 0 })[k] += r.primaryValue / 1e6; // ล้านดอลลาร์
+  }
+  const list = Object.values(rows);
+  if (!list.length) throw new Error(`ไม่มีข้อมูลเดือน ${period}`);
+  return { period, rows: list };
+}
+
 // ---------- 13) ค่าไฟฟ้าผันแปร (Ft) จากหน้าเว็บ กกพ. (ปรับทุก 4 เดือน หน่วย สตางค์/หน่วย) ----------
 const TH_MONTHS = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
 export async function fetchFt() {
