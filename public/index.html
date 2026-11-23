@@ -313,7 +313,7 @@
       <div class="muted" id="refreshMsg" role="status" aria-live="polite"></div></div>
   </header>
   <nav class="topnav" aria-label="หมวด">
-    <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#watch">จับตาหุ้น</a><a href="#bonds">ตราสารหนี้</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a><a href="#cheer" class="nav-cheer">💕 เติมน้องสวี</a>
+    <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#bonds">ตราสารหนี้</a><a href="#watch">จับตาหุ้น</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a><a href="#cheer" class="nav-cheer">💕 เติมน้องสวี</a>
   </nav>
   <div id="banner"></div>
   <main class="grid" id="app"><div class="card span-12">กำลังโหลดข้อมูล…</div></main>
@@ -1688,8 +1688,9 @@ $('#refresh').onclick = () => load(true);
 // ไฮไลต์เมนูตามหมวดที่กำลังอ่าน
 addEventListener('scroll', () => {
   const ids = ['top', 'wallet', 'cost', 'invest', 'watch', 'bonds', 'work', 'macro', 'accuracy', 'cheer'];
-  let cur = 'top';
-  for (const id of ids) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < 90) cur = id; }
+  // เลือกหมวดที่หัวข้อเลื่อนผ่านขอบบนมาล่าสุด (ใกล้ขอบบนที่สุด) ไม่ขึ้นกับลำดับในรายการ
+  let cur = 'top', best = -Infinity;
+  for (const id of ids) { const el = document.getElementById(id); if (!el) continue; const y = el.getBoundingClientRect().top; if (y < 90 && y > best) { best = y; cur = id; } }
   const ch = document.getElementById('cheer'); if (ch && ch.getBoundingClientRect().top < innerHeight * 0.5) cur = 'cheer';
   document.querySelectorAll('.topnav a').forEach((a) => a.classList.toggle('on', a.getAttribute('href') === '#' + cur));
 }, { passive: true });
