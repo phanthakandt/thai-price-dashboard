@@ -498,3 +498,105 @@ export async function fetchThaiYields() {
   rows.sort((a, b) => a.date.localeCompare(b.date));
   return { rows, source: 'ThaiBMA (สมาคมตลาดตราสารหนี้ไทย)' };
 }
+
+// ---------- 20) หุ้นรายตัว: จับตาและวิเคราะห์ (Yahoo Finance) ----------
+// ข้อมูลงบการเงินต้องใช้ cookie + crumb ของ Yahoo จึงขอครั้งเดียวต่อรอบแล้วใช้ซ้ำ
+const YUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36';
+let ySession = null;
+async function yahooSession() {
+  if (ySession) return ySession;
+  const r = await fetch('https://fc.yahoo.com', { headers: { 'User-Agent': YUA }, redirect: 'manual', signal: AbortSignal.timeout(15000) }).catch(() => null);
+  const cookie = (r?.headers.getSetCookie?.() || []).map((c) => c.split(';')[0]).join('; ');
+  const cr = await fetch('https://query2.finance.yahoo.com/v1/test/getcrumb', { headers: { 'User-Agent': YUA, Cookie: cookie }, signal: AbortSignal.timeout(15000) });
+  const crumb = (await cr.text()).trim();
+  if (!cr.ok || !crumb || crumb.length > 40) throw new Error(`ขอ crumb จาก Yahoo ไม่ได้ (HTTP ${cr.status})`);
+  ySession = { cookie, crumb };
+  return ySession;
+}
+async function yGet(url, { auth = false, method = 'GET', body } = {}) {
+  for (let i = 0; i < 3; i++) {
+    const s = auth ? await yahooSession() : null;
+    const u = auth ? url + (url.includes('?') ? '&' : '?') + 'crumb=' + encodeURIComponent(s.crumb) : url;
+    const res = await fetch(u, {
+      method, body, signal: AbortSignal.timeout(25000),
+      headers: { 'User-Agent': YUA, Accept: 'application/json', ...(s ? { Cookie: s.cookie } : {}), ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    });
+    if (res.status === 401 && auth) { ySession = null; continue; }
+    if (res.status === 429) { await new Promise((r) => setTimeout(r, 3000 * (i + 1))); continue; }
+    if (!res.ok) throw new Error(`HTTP ${res.status} จาก Yahoo`);
+    return res.json();
+  }
+  throw new Error('Yahoo ปฏิเสธคำขอซ้ำหลายครั้ง');
+}
+const isThaiCommon = (s) => /^[A-Z0-9&]+\.BK$/.test(s) && !/\d{2}\.BK$/.test(s);
+
+// หุ้นไทยขนาดใหญ่ n ตัวแรกตามมูลค่าตลาด (ตัด NVDR และ DR ออก) ใช้แทนรายชื่อ SET100
+export async function fetchSetUniverse(n = 100) {
+  const body = { offset: 0, size: 250, sortField: 'intradaymarketcap', sortType: 'DESC', quoteType: 'EQUITY',
+    query: { operator: 'AND', operands: [{ operator: 'eq', operands: ['exchange', 'SET'] }] }, userId: '', userIdType: 'guid' };
+  const j = await yGet('https://query2.finance.yahoo.com/v1/finance/screener?lang=en-US&region=TH&formatted=false', { auth: true, method: 'POST', body: JSON.stringify(body) });
+  const q = (j?.finance?.result?.[0]?.quotes || []).filter((x) => isThaiCommon(x.symbol));
+  if (q.length < 30) throw new Error(`รายชื่อหุ้นไทยจาก Yahoo น้อยผิดปกติ (${q.length})`);
+  return q.slice(0, n).map((x) => ({ symbol: x.symbol, name: x.longName || x.shortName, cap: x.marketCap }));
+}
+// ราคาล่าสุดหลายตัวพร้อมกัน
+export async function fetchQuotes(symbols) {
+  const out = {};
+  for (let i = 0; i < symbols.length; i += 50) {
+    const j = await yGet(`https://query2.finance.yahoo.com/v7/finance/quote?symbols=${symbols.slice(i, i + 50).map(encodeURIComponent).join(',')}`, { auth: true });
+    for (const q of j?.quoteResponse?.result || []) out[q.symbol] = {
+      price: q.regularMarketPrice, prev: q.regularMarketPreviousClose, time: q.regularMarketTime, name: q.longName || q.shortName, currency: q.currency,
+      cap: q.marketCap, pe: q.trailingPE, pb: q.priceToBook, dy: q.dividendYield, avgVol3m: q.averageDailyVolume3Month, exchange: q.exchange, type: q.quoteType,
+      earnings: q.earningsTimestampStart || q.earningsTimestamp || null, rating: q.averageAnalystRating || null,
+    };
+  }
+  return out;
+}
+// ราคาย้อนหลัง 3 ปี รายวัน (เก็บแบบอาร์เรย์เพื่อประหยัดพื้นที่)
+export async function fetchStockHistory(symbol) {
+  const j = await yGet(`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=3y&interval=1d&events=div`);
+  const r = j?.chart?.result?.[0];
+  if (!r?.timestamp?.length) throw new Error(`ไม่มีราคาย้อนหลังของ ${symbol}`);
+  const q = r.indicators.quote[0], d = [], c = [], h = [], l = [], v = [];
+  const rnd = (x) => Math.round(x * 1e4) / 1e4;
+  r.timestamp.forEach((t, i) => {
+    if (q.close[i] == null) return;
+    d.push(isoDate(new Date((t + (r.meta.gmtoffset || 0)) * 1000)));
+    c.push(rnd(q.close[i])); h.push(rnd(q.high[i] ?? q.close[i])); l.push(rnd(q.low[i] ?? q.close[i])); v.push(q.volume[i] ?? 0);
+  });
+  const divs = Object.values(r.events?.dividends || {}).map((x) => ({ date: isoDate(new Date(x.date * 1000)), amount: x.amount })).sort((a, b) => a.date.localeCompare(b.date));
+  return { d, c, h, l, v, divs, currency: r.meta.currency, name: r.meta.longName || r.meta.shortName, exchange: r.meta.exchangeName };
+}
+// ข้อมูลพื้นฐาน: อัตราส่วนการเงิน กลุ่มธุรกิจ เป้าราคานักวิเคราะห์
+export async function fetchStockProfile(symbol) {
+  const j = await yGet(`https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}?modules=price,summaryDetail,defaultKeyStatistics,financialData,assetProfile,calendarEvents`, { auth: true });
+  const x = j?.quoteSummary?.result?.[0];
+  if (!x) throw new Error(`ไม่มีข้อมูลพื้นฐานของ ${symbol}`);
+  const r = (o) => (o && typeof o === 'object' ? o.raw ?? null : o ?? null);
+  const f = x.financialData || {}, sd = x.summaryDetail || {}, k = x.defaultKeyStatistics || {}, ap = x.assetProfile || {};
+  return {
+    name: x.price?.longName || x.price?.shortName, sector: ap.sector || null, industry: ap.industry || null, country: ap.country || null,
+    cap: r(x.price?.marketCap), pe: r(sd.trailingPE), fpe: r(sd.forwardPE), pb: r(k.priceToBook), dy: r(sd.dividendYield), payout: r(sd.payoutRatio),
+    beta: r(sd.beta), roe: r(f.returnOnEquity), roa: r(f.returnOnAssets), de: r(f.debtToEquity), currentRatio: r(f.currentRatio),
+    revGrowth: r(f.revenueGrowth), epsGrowth: r(f.earningsGrowth), margin: r(f.profitMargins), opMargin: r(f.operatingMargins), fcf: r(f.freeCashflow),
+    target: r(f.targetMeanPrice), targetLow: r(f.targetLowPrice), targetHigh: r(f.targetHighPrice), analysts: r(f.numberOfAnalystOpinions), rec: f.recommendationKey || null,
+    exDiv: r(x.calendarEvents?.exDividendDate), earnings: r(x.calendarEvents?.earnings?.earningsDate?.[0]), summary: (ap.longBusinessSummary || '').slice(0, 400),
+  };
+}
+// งบย้อนหลัง: รายได้ กำไร EPS กระแสเงินสดอิสระ (รายปี) และรายได้/กำไรรายไตรมาส
+export async function fetchStockFinancials(symbol) {
+  const types = ['annualTotalRevenue', 'annualNetIncome', 'annualDilutedEPS', 'annualFreeCashFlow', 'quarterlyTotalRevenue', 'quarterlyNetIncome'];
+  const now = Math.floor(Date.now() / 1000);
+  const j = await yGet(`https://query2.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/${encodeURIComponent(symbol)}?type=${types.join(',')}&period1=${now - 6 * 365 * 86400}&period2=${now}`);
+  const out = {};
+  for (const s of j?.timeseries?.result || []) {
+    const t = s.meta?.type?.[0];
+    if (t) out[t] = (s[t] || []).filter(Boolean).map((p) => ({ date: p.asOfDate, value: p.reportedValue?.raw ?? null })).filter((p) => p.value != null);
+  }
+  return out;
+}
+// ค้นหาสัญลักษณ์หุ้นจากชื่อ (ใช้ตอนเพิ่มหุ้นนอกรายการ)
+export async function searchStock(q) {
+  const j = await yGet(`https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=8&newsCount=0`);
+  return (j?.quotes || []).filter((x) => ['EQUITY', 'ETF'].includes(x.quoteType)).map((x) => ({ symbol: x.symbol, name: x.longname || x.shortname, exchange: x.exchange, type: x.quoteType }));
+}

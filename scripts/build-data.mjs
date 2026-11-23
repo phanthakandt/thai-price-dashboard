@@ -7,6 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHistory } from '../lib/history.js';
 import { createBuilder } from '../lib/build.js';
+import { buildStocks } from '../lib/stock-data.js';
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = path.join(ROOT, process.env.OUT_DIR || '_site');
@@ -63,6 +64,28 @@ history.save();
 writeFileSync(path.join(OUT, 'data.json'), JSON.stringify(data));
 writeFileSync(path.join(OUT, 'cache.json'), JSON.stringify(exportCache()));
 writeFileSync(path.join(OUT, '.nojekyll'), '');
+
+// ---- หุ้นจับตา: วิเคราะห์หุ้นไทยใหญ่ 100 ตัว + หุ้นต่างประเทศยอดนิยม + หุ้นที่ขอเพิ่มใน watchlist.json ----
+{
+  const wl = existsSync(path.join(ROOT, 'watchlist.json')) ? JSON.parse(readFileSync(path.join(ROOT, 'watchlist.json'), 'utf8')) : {};
+  const stockCache = MOCK ? {} : (await loadPrev('stock-cache.json')) || {};
+  const DEFAULT_WATCH = ['PTT.BK', 'CPALL.BK', 'DELTA.BK', 'KBANK.BK', 'AOT.BK', 'ADVANC.BK', 'NVDA', 'AAPL'];
+  try {
+    const st = await buildStocks({ S, cache: stockCache, extra: wl.extra || [], priority: DEFAULT_WATCH, mock: MOCK });
+    st.summary.defaults = DEFAULT_WATCH;
+    mkdirSync(path.join(OUT, 'stocks'), { recursive: true });
+    for (const [sym, d] of Object.entries(st.details)) writeFileSync(path.join(OUT, 'stocks', sym.replace(/[^A-Za-z0-9.-]/g, '_') + '.json'), JSON.stringify(d));
+    writeFileSync(path.join(OUT, 'stocks.json'), JSON.stringify(st.summary));
+    writeFileSync(path.join(OUT, 'stock-cache.json'), JSON.stringify(stockCache));
+    const L = st.summary.list, cnt = (v) => L.filter((x) => x.v === v).length;
+    console.log('หุ้นจับตา    ', `วิเคราะห์ ${L.length} ตัว (ขาด ${st.log.missing}) · ดึงใหม่ ราคา ${st.log.hist} พื้นฐาน ${st.log.prof} งบ ${st.log.fin} · ${Math.round(st.log.ms / 1000)} วินาที`,
+      `· ทั้งคู่ ${cnt('both')} ยาว ${cnt('long')} สั้น ${cnt('short')} รอ ${cnt('wait')} ระวัง ${cnt('caution')} · ล้มเหลว ${st.log.fail.length}`);
+    for (const f of st.log.fail.slice(0, 6)) console.log('   ✗', f);
+    for (const x of L.filter((x) => DEFAULT_WATCH.includes(x.s))) console.log(`   ${x.s.padEnd(10)} ${x.px} สั้น ${x.ss} ยาว ${x.ls ?? '-'} → ${x.v}${x.flTop ? ' ⚠ ' + x.flTop : ''}`);
+    const bt = st.summary.backtest?.all;
+    if (bt) console.log('   backtest', `n=${bt.n} ${bt.from}–${bt.to}`, bt.buckets.map((b) => `${b.name}: n=${b.n} 1ด.เฉลี่ย ${(b.avg * 100).toFixed(2)}% ส่วนเกิน ${(b.excess * 100).toFixed(2)}% ชนะตลาด ${Math.round(b.beat * 100)}%`).join(' | '));
+  } catch (e) { console.log('หุ้นจับตา     ล้มเหลว', e.stack); }
+}
 
 // สรุปผลใน log ของ Actions
 const ok = (s) => (s?.ok ? (s.stale ? 'ใช้ค่าเก่า' : 'OK') : `ล้มเหลว: ${s?.error}`);

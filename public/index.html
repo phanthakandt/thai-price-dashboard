@@ -242,6 +242,54 @@
     body.nong-open { overflow: hidden; }
   }
   @media (prefers-reduced-motion: reduce) { .nong-bubble, .nong-btn { transition: none; } }
+  /* ---------- จับตาหุ้น ---------- */
+  .w-add { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+  .w-add input { flex: 1 1 220px; min-width: 0; font: inherit; font-size: 15px; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); }
+  .w-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .w-chip { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: 999px; padding: 3px 4px 3px 10px; font-size: 13px; background: var(--surface-1); }
+  .w-chip a { color: inherit; text-decoration: none; }
+  .w-chip button { border: 0; background: none; color: var(--text-muted); cursor: pointer; font-size: 15px; padding: 0 6px; line-height: 1; }
+  .w-msg { margin-top: 8px; font-size: 13px; }
+  .w-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .w-head h2 { margin: 0; font-size: 17px; }
+  .w-head .px { text-align: right; white-space: nowrap; }
+  .w-head .px b { font-size: 20px; }
+  .w-x { border: 0; background: none; color: var(--text-muted); font-size: 20px; cursor: pointer; padding: 0 4px; margin-left: 6px; }
+  .verdict { display: inline-block; margin: 10px 0 4px; padding: 6px 12px; border-radius: 10px; font-weight: 700; font-size: 15px; }
+  .v-both, .v-long, .v-short { background: color-mix(in srgb, var(--good) 14%, transparent); color: var(--good); }
+  .v-wait { background: var(--grid); color: var(--text-secondary); }
+  .v-caution { background: color-mix(in srgb, var(--critical) 14%, transparent); color: var(--critical); }
+  .meters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 8px 0 4px; }
+  .meter .lbl { display: flex; justify-content: space-between; font-size: 13px; color: var(--text-secondary); }
+  .meter .lbl b { color: var(--text-primary); }
+  .meter .bar { height: 8px; border-radius: 4px; background: var(--grid); overflow: hidden; margin-top: 4px; }
+  .meter .bar > div { height: 100%; border-radius: 4px; }
+  .meter .sub { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
+  .kv { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px 12px; margin: 10px 0; }
+  .kv div { font-size: 12px; color: var(--text-muted); }
+  .kv b { display: block; font-size: 14px; color: var(--text-primary); font-weight: 600; }
+  .pc { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; font-size: 13px; }
+  .pc h3 { font-size: 13px; margin: 0 0 4px; }
+  .pc ul { margin: 0; padding-left: 18px; } .pc li { margin: 3px 0; }
+  .flags { margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--critical) 9%, transparent); font-size: 13px; }
+  .flags li { margin: 2px 0; } .flags ul { margin: 4px 0 0; padding-left: 18px; }
+  .fall { margin-top: 10px; padding: 10px 12px; border-radius: 10px; border: 1px dashed var(--border); font-size: 13px; }
+  .fall h3 { font-size: 14px; margin: 0 0 6px; }
+  .fall .chk { list-style: none; padding: 0; margin: 6px 0 0; } .fall .chk li { margin: 2px 0; }
+  .fall .chk .ok { color: var(--good); } .fall .chk .no { color: var(--text-muted); }
+  .w-foot { margin-top: 8px; font-size: 11.5px; color: var(--text-muted); }
+  .w-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .w-filter .tab { font-size: 13px; padding: 4px 12px; }
+  table.scan td { vertical-align: middle; } table.scan .add { border: 1px solid var(--border); background: none; border-radius: 8px; cursor: pointer; padding: 2px 8px; color: var(--text-secondary); }
+  .sc { display: inline-block; min-width: 30px; text-align: center; border-radius: 6px; padding: 1px 4px; font-weight: 600; font-size: 12.5px; }
+  .sc-g { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+  .sc-m { background: var(--grid); color: var(--text-secondary); }
+  .sc-w { background: color-mix(in srgb, var(--critical) 13%, transparent); color: var(--critical); }
+  @media (max-width: 600px) {
+    .kv { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .pc, .meters { grid-template-columns: 1fr; }
+    .w-head h2 { font-size: 16px; }
+  }
   footer { margin-top: 24px; color: var(--text-muted); font-size: 12px; }
   footer a { color: var(--text-secondary); }
 </style>
@@ -257,7 +305,7 @@
       <div class="muted" id="refreshMsg" role="status" aria-live="polite"></div></div>
   </header>
   <nav class="topnav" aria-label="หมวด">
-    <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#bonds">ตราสารหนี้</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a><a href="#cheer" class="nav-cheer">💕 เติมน้องสวี</a>
+    <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#watch">จับตาหุ้น</a><a href="#bonds">ตราสารหนี้</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a><a href="#cheer" class="nav-cheer">💕 เติมน้องสวี</a>
   </nav>
   <div id="banner"></div>
   <main class="grid" id="app"><div class="card span-12">กำลังโหลดข้อมูล…</div></main>
@@ -1114,6 +1162,8 @@ async function load(manual = false) {
       signalMarketCard(d) + rangeCard(R('set')) +
       sectorsCard(d.sectors) +
       newsCard(d.news, ['gold', 'stock', 'fx'], 'ข่าวทอง หุ้น และค่าเงิน') +
+      sec('watch', 'จับตาหุ้น', 'เลือกหุ้นที่สนใจ ระบบวิเคราะห์แนวโน้ม พื้นฐาน และความเสี่ยงให้ทุกวัน') +
+      '<div class="span-12 grid" id="watchRoot"><div class="card span-12 muted">กำลังโหลดข้อมูลหุ้น…</div></div>' +
       sec('work', 'งานและรายได้', 'การว่างงาน และงานกลุ่มไหนกำลังโตหรือหด') +
       unemploymentCard(d.unemployment) + jobsCard(d.jobs) +
       sec('macro', 'ภาพรวมเศรษฐกิจ', 'GDP การส่งออก นำเข้า ดุลการค้า ไทยเทียบเพื่อนบ้านและโลก') +
@@ -1121,10 +1171,11 @@ async function load(manual = false) {
       newsCard(d.news, ['econ'], 'ข่าวเศรษฐกิจและการค้า') +
       imfCard(d.forecast?.imf) +
       sec('accuracy', 'ความแม่นและย้อนหลัง', 'ตรวจว่าที่ระบบเคยบอก ถูกแค่ไหน') +
-      accuracyCard(d.accuracy) + archiveCard(d.archive);
+      accuracyCard(d.accuracy) + '<div class="span-12 grid" id="watchBt"></div>' + archiveCard(d.archive);
 
     renderWallet(d);
     nongUpdate(d);
+    loadWatch();
     const tr = d.macro?.trade;
     if (tr && $('#tradeChart')) {
       const rows = tr.rows.slice(-24), pt = (k) => rows.map((r) => ({ date: r.date, value: r[k] / 1000 }));
@@ -1363,6 +1414,200 @@ document.addEventListener('click', (e) => {
   setTimeout(burst, Math.min(2500, 500 + Math.abs(r.top) / 4));
 });
 
+// ---------- จับตาหุ้น ----------
+const WATCH_KEY = 'thai-price-watch-v1';
+const W = { sum: null, det: {}, filter: 'long', market: 'all', more: false, loading: null };
+const SECTOR_TH = { 'Energy': 'พลังงาน', 'Financial Services': 'การเงิน/ธนาคาร', 'Technology': 'เทคโนโลยี', 'Consumer Defensive': 'สินค้าจำเป็น/ค้าปลีก',
+  'Consumer Cyclical': 'สินค้าฟุ่มเฟือย', 'Industrials': 'อุตสาหกรรม/ขนส่ง', 'Utilities': 'ไฟฟ้า/สาธารณูปโภค', 'Real Estate': 'อสังหาริมทรัพย์',
+  'Healthcare': 'การแพทย์', 'Basic Materials': 'วัสดุ/ปิโตรเคมี', 'Communication Services': 'สื่อสาร/โทรคมนาคม' };
+const VERDICT = { both: ['น่าสนใจทั้งระยะสั้นและระยะยาว', 'v-both'], long: ['น่าสนใจระยะยาว', 'v-long'], short: ['น่าสนใจระยะสั้น', 'v-short'],
+  wait: ['รอดูก่อน', 'v-wait'], caution: ['ควรระวัง', 'v-caution'] };
+const wList = () => { try { const a = JSON.parse(localStorage.getItem(WATCH_KEY)); return Array.isArray(a) ? a : null; } catch { return null; } };
+const wSave = (a) => { try { localStorage.setItem(WATCH_KEY, JSON.stringify(a)); } catch {} };
+const wSyms = () => wList() ?? (W.sum?.defaults || []);
+const symShort = (s) => s.replace(/\.BK$/, '');
+const scCls = (v) => v == null ? 'sc-m' : v >= 65 ? 'sc-g' : v >= 45 ? 'sc-m' : 'sc-w';
+const pctS = (v, d = 1) => v == null ? '–' : sgnC(v * 100, d) + '%';
+const money = (v, cur) => v == null ? '–' : fmt(v, v >= 1000 ? 0 : 2) + (cur === 'USD' ? ' $' : '');
+const bigNum = (v) => v == null ? '–' : Math.abs(v) >= 1e12 ? fmt(v / 1e12, 2) + ' ล้านล้าน' : Math.abs(v) >= 1e9 ? fmt(v / 1e9, 1) + ' พันล้าน' : fmt(v / 1e6, 0) + ' ล้าน';
+const repoUrl = () => { const m = location.hostname.match(/^([^.]+)\.github\.io$/); const r = location.pathname.split('/').filter(Boolean)[0]; return m && r ? `https://github.com/${m[1]}/${r}` : 'https://github.com/phanthakandt/thai-price-dashboard'; };
+
+async function loadWatch() {
+  try {
+    if (!W.loading) W.loading = fetch(`stocks.json?t=${Date.now()}`, { cache: 'no-store' }).then((r) => r.ok ? r.json() : null);
+    const sum = await W.loading; W.loading = null;
+    if (!sum) { $('#watchRoot').innerHTML = '<div class="card span-12 muted">ยังไม่มีข้อมูลหุ้น ระบบจะเริ่มดึงในรอบอัปเดตถัดไป</div>'; return; }
+    W.sum = sum; W.by = Object.fromEntries(sum.list.map((x) => [x.s, x]));
+    // หุ้นที่เคยกดขอเพิ่ม: ถ้ามีข้อมูลแล้วให้เข้ารายการจับตาเอง
+    try {
+      const pd = JSON.parse(localStorage.getItem(WATCH_KEY + '-pending') || '[]');
+      const found = pd.map((q) => sum.list.find((x) => x.s === q || x.s === q + '.BK')).filter(Boolean);
+      if (found.length) {
+        wSave([...found.map((x) => x.s), ...wSyms().filter((s) => !found.some((x) => x.s === s))]);
+        localStorage.setItem(WATCH_KEY + '-pending', JSON.stringify(pd.filter((q) => !found.some((x) => x.s === q || x.s === q + '.BK'))));
+      }
+    } catch {}
+    renderWatch(); renderWatchBt();
+  } catch (e) { $('#watchRoot').innerHTML = `<div class="card span-12 err">โหลดข้อมูลหุ้นไม่สำเร็จ: ${esc(e.message)}</div>`; }
+}
+async function stockDetail(sym) {
+  if (W.det[sym] && Date.now() - W.det[sym].at < 10 * 60e3) return W.det[sym].d;
+  const r = await fetch(`stocks/${sym.replace(/[^A-Za-z0-9.-]/g, '_')}.json?t=${Date.now()}`, { cache: 'no-store' });
+  if (!r.ok) throw new Error('ยังไม่มีข้อมูลหุ้นตัวนี้');
+  const d = await r.json(); W.det[sym] = { at: Date.now(), d }; return d;
+}
+function renderWatch() {
+  const root = $('#watchRoot'); if (!root || !W.sum) return;
+  const syms = wSyms();
+  const opts = W.sum.list.map((x) => `<option value="${esc(symShort(x.s))}">${esc(x.n)}</option>`).join('');
+  root.innerHTML = `<section class="card span-12">
+      <div class="card-head"><h2>หุ้นที่จับตา</h2><span class="muted">ข้อมูลหุ้น ${W.sum.count} ตัว · อัปเดต ${thTime(W.sum.updated)}</span></div>
+      <div class="w-add"><input id="wInput" list="wOpts" placeholder="พิมพ์ชื่อหุ้น เช่น PTT, CPALL, NVDA" autocomplete="off" aria-label="เพิ่มหุ้นที่จับตา"><button id="wAddBtn" type="button">+ เพิ่ม</button></div>
+      <datalist id="wOpts">${opts}</datalist>
+      <div class="w-msg" id="wMsg" role="status" aria-live="polite"></div>
+      <div class="w-chips">${syms.map((s) => `<span class="w-chip"><a href="#w-${esc(s)}">${esc(symShort(s))}</a><button data-rm="${esc(s)}" aria-label="เลิกจับตา ${esc(symShort(s))}">×</button></span>`).join('') || '<span class="muted">ยังไม่มีหุ้นที่จับตา</span>'}</div>
+      <div class="explain">ระบบให้คะแนน 2 แบบ: <b>ระยะสั้น</b> (1–3 เดือน) ดูจากแนวโน้มราคา แรงซื้อขาย และความแข็งแกร่งเทียบตลาด
+        <b>ระยะยาว</b> (1 ปีขึ้นไป) ดูจากราคาถูกหรือแพงเทียบกลุ่มเดียวกัน ความสามารถทำกำไร หนี้ การเติบโต และปันผล
+        เป็นการคัดกรองด้วยสูตรที่เปิดเผยได้ ไม่ใช่คำแนะนำการลงทุน ราคาจาก Yahoo Finance ดีเลย์ราว 15–20 นาที</div>
+    </section>
+    ${syms.map((s) => `<section class="card span-6" id="w-${esc(s)}"><div class="muted">กำลังโหลด ${esc(symShort(s))}…</div></section>`).join('')}
+    <section class="card span-12" id="wScan"></section>`;
+  for (const s of syms) renderStockCard(s);
+  renderScan();
+}
+function addWatch(raw) {
+  const q = raw.trim().toUpperCase(); if (!q) return;
+  const L = W.sum.list, msg = $('#wMsg');
+  const hit = L.find((x) => x.s === q) || L.find((x) => x.s === q + '.BK') || L.find((x) => x.n.toUpperCase() === q) || L.find((x) => x.n.toUpperCase().startsWith(q));
+  if (!hit) {
+    try { const pd = JSON.parse(localStorage.getItem(WATCH_KEY + '-pending') || '[]'); if (!pd.includes(q)) localStorage.setItem(WATCH_KEY + '-pending', JSON.stringify([...pd, q].slice(-10))); } catch {}
+    const t = encodeURIComponent(`เพิ่มหุ้น: ${q}`), b = encodeURIComponent(`ขอเพิ่มหุ้น ${q} เข้าระบบวิเคราะห์\n(สร้างจากปุ่มในเว็บ ไม่ต้องแก้ไข)`);
+    msg.innerHTML = `ยังไม่มี <b>${esc(q)}</b> ในระบบ (มีหุ้นไทยใหญ่ 100 ตัวและหุ้นต่างประเทศยอดนิยม) —
+      <a href="${repoUrl()}/issues/new?title=${t}&body=${b}" target="_blank" rel="noopener">กดขอเพิ่มหุ้นตัวนี้</a> แล้วกด Submit บน GitHub ระบบจะเพิ่มให้ภายในราว 5 นาที และจะขึ้นในรายการจับตาของคุณเองเมื่อพร้อม`;
+    return;
+  }
+  const a = wSyms().filter((x) => x !== hit.s); a.unshift(hit.s); wSave(a);
+  renderWatch();
+  setTimeout(() => document.getElementById('w-' + hit.s)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+}
+function rmWatch(s) { wSave(wSyms().filter((x) => x !== s)); renderWatch(); }
+
+async function renderStockCard(sym) {
+  const el = document.getElementById('w-' + sym); if (!el) return;
+  let d;
+  try { d = await stockDetail(sym); } catch (e) {
+    el.innerHTML = `<div class="w-head"><h2>${esc(symShort(sym))}</h2><button class="w-x" data-rm="${esc(sym)}" aria-label="เลิกจับตา">×</button></div><div class="muted" style="margin-top:8px">${esc(e.message)} (หุ้นที่เพิ่งขอเพิ่มจะมีข้อมูลในรอบอัปเดตถัดไป)</div>`;
+    return;
+  }
+  const a = d.analysis, t = a.t, p = d.profile || {}, cur = d.currency, [vt, vc] = VERDICT[a.verdict];
+  const meter = (label, v, sub) => `<div class="meter"><div class="lbl"><span>${label}</span><b>${v == null ? 'ข้อมูลไม่พอ' : v + '/100'}</b></div>
+    <div class="bar"><div style="width:${v ?? 0}%;background:var(${v == null ? '--grid' : v >= 65 ? '--good' : v >= 45 ? '--axis' : '--critical'})"></div></div><div class="sub">${sub}</div></div>`;
+  const sLbl = { good: 'แนวโน้มและแรงซื้อดี', mid: 'กลางๆ ยังไม่ชัด', weak: 'แนวโน้มอ่อน ยังไม่น่าเข้า' }[a.shortLabel];
+  const lLbl = { good: 'พื้นฐานดี ราคาสมเหตุสมผล', mid: 'พื้นฐานพอใช้', weak: 'พื้นฐานหรือราคายังไม่จูงใจ', na: 'ไม่มีข้อมูลงบเพียงพอ' }[a.longLabel];
+  const peerTxt = d.peer?.pe && p.pe ? `<div class="muted">กลุ่ม ${fmt(d.peer.pe, 1)}</div>` : '';
+  const kv = [
+    ['1 เดือน', pctS(t.ret1m)], ['1 ปี', pctS(t.ret1y)], ['จากจุดสูงสุดรอบปี', pctS(t.dd)], ['RSI (14 วัน)', t.rsi == null ? '–' : fmt(t.rsi, 0) + (t.rsi > 70 ? ' ร้อนแรง' : t.rsi < 30 ? ' ขายมากไป' : '')],
+    ['P/E', (p.pe ? fmt(p.pe, 1) + ' เท่า' : '–') + peerTxt], ['P/B', p.pb ? fmt(p.pb, 2) + ' เท่า' : '–'], ['ROE', p.roe != null ? fmt(p.roe * 100, 1) + '%' : '–'], ['ปันผล', p.dy ? fmt(p.dy * 100, 2) + '%' : '–'],
+    ['หนี้สิน/ทุน', p.de != null ? fmt(p.de, 0) + '%' : '–'], ['รายได้โต', pctS(p.revGrowth)], ['กำไรโต', pctS(p.epsGrowth)],
+    ['เป้านักวิเคราะห์', p.target && p.analysts ? `${money(p.target, cur)} <span class="muted">(${p.analysts} ราย)</span>` : '–'],
+  ];
+  const lv = a.levels, ld = (x) => `${money(x.price, cur)} <span class="muted">(${x.pct >= 0 ? '+' : '−'}${fmt(Math.abs(x.pct * 100), 1)}% · ${esc(x.kind)})</span>`;
+  const f = a.fall;
+  const tradeDays = (n) => { const dt = new Date(); let k = 0; while (k < n) { dt.setDate(dt.getDate() + 1); if (dt.getDay() % 6) k++; } return dt; };
+  const fallHtml = f ? (() => {
+    const st = f.stats;
+    const eta = st ? tradeDays(Math.round(st.recMed)) : null, slow = st ? tradeDays(Math.round(Math.min(st.recSlow, 180))) : null;
+    return `<div class="fall"><h3>📉 กำลังลง: จะลงอีกแค่ไหน และจะฟื้นเมื่อไหร่</h3>
+      <div>1 เดือนที่ผ่านมา ${pctS(f.ret1m)} · ต่ำกว่าจุดสูงสุดรอบปี ${fmt(Math.abs(f.dd * 100), 0)}%</div>
+      <div style="margin-top:6px"><b>กรอบราคา 1 เดือนข้างหน้า</b> (โอกาสราว 80% จากความผันผวนปัจจุบัน): ${money(f.range1m.lo, cur)} – ${money(f.range1m.hi, cur)}</div>
+      ${f.support.length ? `<div style="margin-top:4px"><b>แนวรับถัดไป</b> (จุดที่ในอดีตมักมีแรงซื้อกลับ): ${f.support.map(ld).join(' · ')}</div>` : ''}
+      ${st ? `<div style="margin-top:6px"><b>สถิติจากเหตุการณ์คล้ายกันในอดีต</b> (${st.n} ครั้ง${f.statsSource === 'pooled' ? (f.ownN ? ` รวมหุ้นอื่นในตลาดเดียวกัน เพราะตัวนี้มีแค่ ${f.ownN} ครั้ง` : ' จากหุ้นอื่นในตลาดเดียวกัน เพราะใน 3 ปีที่ผ่านมาตัวนี้ไม่เคยลงลึกระดับนี้') : ' ของหุ้นตัวนี้'}):
+        <ul style="margin:4px 0 0;padding-left:18px">
+          <li>หลังจากนั้นลงต่ออีกโดยทั่วไป ${fmt(Math.abs(st.furtherMed * 100), 1)}% กรณีแย่ (1 ใน 5) ลงต่อ ${fmt(Math.abs(st.furtherBad * 100), 1)}%</li>
+          <li>ใช้เวลาโดยทั่วไป ${Math.round(st.recMed)} วันทำการ จึงกลับขึ้นเหนือเส้นค่าเฉลี่ย 50 วัน → <b>ราว ${thDate(eta)}</b> ถ้าเป็นไปตามค่ากลาง (1 ใน 4 ครั้งใช้นานกว่า ${Math.round(st.recSlow)} วัน หรือหลัง ${thDate(slow)})</li>
+          <li>60 วันทำการต่อมา ราคาสูงกว่าจุดนั้น ${Math.round(st.up60 * 100)}% ของครั้ง</li>
+        </ul></div>` : '<div class="muted" style="margin-top:6px">ยังมีเหตุการณ์คล้ายกันในอดีตไม่พอจะประมาณเวลาฟื้นตัว</div>'}
+      <div style="margin-top:6px"><b>สัญญาณที่จะบอกว่าเริ่มฟื้น</b> (ตอนนี้ผ่าน ${f.met}/${f.checks.length})</div>
+      <ul class="chk">${f.checks.map((c) => `<li class="${c.ok ? 'ok' : 'no'}">${c.ok ? '✓' : '○'} ${esc(c.text)}</li>`).join('')}</ul>
+      <div class="muted" style="margin-top:6px">ตัวเลขเหล่านี้มาจากสถิติ ไม่ใช่คำทำนาย ข่าวร้ายเฉพาะของบริษัททำให้ลงได้ลึกกว่านี้</div></div>`;
+  })() : '';
+  const finRows = (() => {
+    const F = d.fin; if (!F?.revenue?.length) return '';
+    const yrs = F.revenue.map((x) => x.date.slice(0, 4)), ni = Object.fromEntries((F.netIncome || []).map((x) => [x.date.slice(0, 4), x.value]));
+    return `<details class="more"><summary>งบย้อนหลัง ${yrs[0]}–${yrs.at(-1)}</summary><table><tr><th>ปี</th><th>รายได้</th><th>กำไรสุทธิ</th><th>อัตรากำไร</th></tr>
+      ${F.revenue.map((x) => { const y = x.date.slice(0, 4), n = ni[y]; return `<tr><td>${+y + 543}</td><td>${bigNum(x.value)}</td><td>${n == null ? '–' : `<span class="${n < 0 ? 'down' : ''}">${bigNum(n)}</span>`}</td><td>${n != null && x.value ? fmt(n / x.value * 100, 1) + '%' : '–'}</td></tr>`; }).join('')}</table></details>`;
+  })();
+  el.innerHTML = `<div class="w-head"><div><h2>${esc(symShort(d.s))} <span class="muted" style="font-weight:400;font-size:13px">${esc(d.name || '')}</span></h2>
+      <div class="muted" style="font-size:12px">${esc(SECTOR_TH[p.sector] || p.sector || '')}${p.industry ? ' · ' + esc(p.industry) : ''}${p.cap ? ' · มูลค่าตลาด ' + bigNum(p.cap) + (cur === 'USD' ? ' $' : ' บาท') : ''}</div></div>
+      <div class="px"><b>${money(d.price, cur)}</b><div>${pctS(d.chg, 2)} วันนี้</div></div><button class="w-x" data-rm="${esc(d.s)}" aria-label="เลิกจับตา ${esc(symShort(d.s))}">×</button></div>
+    <div class="verdict ${vc}">${vt}</div>
+    <div class="meters">${meter('ระยะสั้น (1–3 เดือน)', a.short.score, sLbl)}${meter('ระยะยาว (1 ปีขึ้นไป)', a.long?.score ?? null, lLbl)}</div>
+    <div class="chart" id="wc-${esc(d.s)}"></div>
+    <div class="kv">${kv.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('')}</div>
+    ${a.pros.length || a.cons.length ? `<div class="pc"><div><h3 class="up">จุดเด่น</h3><ul>${a.pros.map((x) => `<li>${esc(x)}</li>`).join('') || '<li class="muted">ยังไม่มีจุดเด่นที่ชัดเจน</li>'}</ul></div>
+      <div><h3 class="down">จุดด้อย</h3><ul>${a.cons.map((x) => `<li>${esc(x)}</li>`).join('') || '<li class="muted">ไม่พบจุดด้อยที่ชัดเจน</li>'}</ul></div></div>` : ''}
+    ${a.flags.length ? `<div class="flags"><b>⚠ ต้องระวัง</b><ul>${a.flags.map((x) => `<li>${x.level === 'high' ? '<b>' + esc(x.text) + '</b>' : esc(x.text)}</li>`).join('')}</ul></div>` : ''}
+    ${fallHtml}
+    <div style="margin-top:10px;font-size:13px">${lv.resistance.length ? `<div><b>แนวต้าน</b> (จุดที่มักมีแรงขาย): ${lv.resistance.map(ld).join(' · ')}</div>` : ''}
+      ${!f && lv.support.length ? `<div style="margin-top:3px"><b>แนวรับ</b>: ${lv.support.map(ld).join(' · ')}</div>` : ''}</div>
+    ${finRows}
+    <div class="w-foot">ราคาถึง ${thDate(d.date)}${d.earnings ? ` · ประกาศงบครั้งถัดไปราว ${thDate(d.earnings * 1000)}` : ''}${p.exDiv && p.exDiv * 1000 > Date.now() ? ` · ขึ้น XD ${thDate(p.exDiv * 1000)}` : ''} · ข้อมูลพื้นฐานอัปเดต ${d.updated.prof ? thDate(d.updated.prof) : '–'}</div>`;
+  const C = d.chart, pts = (arr) => C.d.map((x, i) => ({ date: x, value: arr[i] })).filter((x) => x.value != null);
+  lineChart(document.getElementById('wc-' + d.s), [
+    { name: 'ราคา', color: '--series-1', points: pts(C.c) },
+    { name: 'เฉลี่ย 50 วัน', color: '--series-2', points: pts(C.sma50) },
+    { name: 'เฉลี่ย 200 วัน', color: '--series-3', points: pts(C.sma200) },
+  ], { height: 170, xLabel: thMonth, label: `ราคา ${symShort(d.s)} 1 ปี` });
+}
+
+function renderScan() {
+  const el = $('#wScan'); if (!el || !W.sum) return;
+  const F = { long: ['น่าสนใจระยะยาว', (x) => ['long', 'both'].includes(x.v)], short: ['น่าสนใจระยะสั้น', (x) => ['short', 'both'].includes(x.v)],
+    caution: ['ควรระวัง', (x) => x.v === 'caution'], fall: ['กำลังลง', (x) => x.fall], all: ['ทั้งหมด', () => true] };
+  const M = { all: 'ทุกตลาด', TH: 'หุ้นไทย', US: 'ต่างประเทศ' };
+  const sortK = { long: (x) => -(x.ls ?? -1), short: (x) => -x.ss, caution: (x) => (x.ls ?? 50) + x.ss, fall: (x) => x.r1m, all: (x) => -(x.cap ?? 0) };
+  const watched = new Set(wSyms());
+  let rows = W.sum.list.filter(F[W.filter][1]).filter((x) => W.market === 'all' || x.m === W.market).sort((a, b) => sortK[W.filter](a) - sortK[W.filter](b));
+  const total = rows.length; if (!W.more) rows = rows.slice(0, 15);
+  el.innerHTML = `<div class="card-head"><h2>สแกนหุ้นทั้งหมด</h2><span class="muted">หุ้นไทยใหญ่ ${W.sum.universe.th} ตัว + ต่างประเทศ ${W.sum.universe.us} ตัว</span></div>
+    <div class="w-filter" role="tablist">${Object.entries(F).map(([k, [n]]) => `<button class="tab${W.filter === k ? ' on' : ''}" data-wf="${k}">${n} (${W.sum.list.filter(F[k][1]).filter((x) => W.market === 'all' || x.m === W.market).length})</button>`).join('')}</div>
+    <div class="w-filter">${Object.entries(M).map(([k, n]) => `<button class="tab${W.market === k ? ' on' : ''}" data-wm="${k}">${n}</button>`).join('')}</div>
+    <table class="scan" style="margin-top:10px"><tr><th>หุ้น</th><th>ราคา</th><th>1 เดือน</th><th>สั้น</th><th>ยาว</th><th class="hide-sm">ผลวิเคราะห์ / ข้อควรระวัง</th><th></th></tr>
+      ${rows.map((x) => `<tr><td><b>${esc(symShort(x.s))}</b><div class="muted" style="font-size:11.5px">${esc(SECTOR_TH[x.sec] || x.sec || '')}</div></td>
+        <td>${money(x.px, x.cur)}</td><td>${pctS(x.r1m)}</td><td><span class="sc ${scCls(x.ss)}">${x.ss}</span></td><td><span class="sc ${scCls(x.ls)}">${x.ls ?? '–'}</span></td>
+        <td class="hide-sm">${VERDICT[x.v][0]}${x.flTop ? `<div class="muted" style="font-size:12px">⚠ ${esc(x.flTop)}</div>` : ''}</td>
+        <td>${watched.has(x.s) ? '<span class="muted">✓</span>' : `<button class="add" data-wadd="${esc(x.s)}" aria-label="จับตา ${esc(symShort(x.s))}">+</button>`}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">ไม่มีหุ้นในกลุ่มนี้</td></tr>'}
+    </table>
+    ${total > 15 ? `<button class="tab" style="margin-top:8px" data-wmore="1">${W.more ? 'แสดงน้อยลง' : `ดูทั้งหมด ${total} ตัว`}</button>` : ''}
+    <div class="explain">คะแนน 65 ขึ้นไปถือว่าน่าสนใจ ต่ำกว่า 45 ถือว่าอ่อน "ควรระวัง" คือมีสัญญาณเสี่ยงสูง เช่น ขาดทุน ราคาร่วงหนักจากจุดสูงสุด หรือคะแนนต่ำทั้งสองด้าน
+      กด + เพื่อเพิ่มเข้ารายการจับตา</div>`;
+}
+function renderWatchBt() {
+  const el = $('#watchBt'), bt = W.sum?.backtest?.all; if (!el) return;
+  if (!bt) { el.innerHTML = ''; return; }
+  const th = W.sum.backtest.TH;
+  const tbl = (b) => `<table><tr><th>คะแนนระยะสั้น</th><th>จำนวนครั้ง</th><th>1 เดือนถัดไปเฉลี่ย</th><th>ราคาขึ้น</th><th>ชนะค่าเฉลี่ยตลาด</th><th class="hide-sm">ส่วนเกินเฉลี่ย</th></tr>
+    ${b.buckets.map((x) => `<tr><td>${x.name}</td><td>${x.n.toLocaleString('th-TH')}</td><td>${pctS(x.avg, 2)}</td><td>${Math.round(x.hit * 100)}%</td><td>${Math.round(x.beat * 100)}%</td><td class="hide-sm">${pctS(x.excess, 2)}</td></tr>`).join('')}</table>`;
+  const top = bt.buckets.at(-1), low = bt.buckets[0];
+  el.innerHTML = `<section class="card span-12"><div class="card-head"><h2>คะแนนหุ้นระยะสั้น แม่นแค่ไหน</h2><span class="muted">ทดสอบย้อนหลัง ${bt.from} ถึง ${bt.to} · ${bt.n.toLocaleString('th-TH')} ครั้ง</span></div>
+    ${insightBox([`หุ้นที่ได้คะแนน 65 ขึ้นไป 1 เดือนถัดมาให้ผลตอบแทนเฉลี่ย ${fmt(top.avg * 100, 2)}% เทียบกับกลุ่มคะแนนต่ำกว่า 35 ที่ ${fmt(low.avg * 100, 2)}%`,
+      `กลุ่มคะแนนสูงชนะค่าเฉลี่ยตลาดในเดือนเดียวกัน ${Math.round(top.beat * 100)}% ของครั้ง ${top.beat > 0.55 ? 'คะแนนช่วยคัดหุ้นได้จริงระดับหนึ่ง' : top.beat > 0.5 ? 'ดีกว่าการสุ่มเล็กน้อย ใช้ประกอบเท่านั้น' : 'ยังไม่ดีกว่าการสุ่ม ไม่ควรใช้เป็นเหตุผลหลัก'}`], 'ผลทดสอบ')}
+    ${tbl(bt)}
+    ${th ? `<details class="more"><summary>เฉพาะหุ้นไทย</summary>${tbl(th)}</details>` : ''}
+    <div class="explain">ทดสอบโดยคำนวณคะแนนระยะสั้น ณ สิ้นแต่ละเดือนในอดีตด้วยข้อมูลที่มีในวันนั้นเท่านั้น แล้วดูราคา 1 เดือนถัดมา
+      "ชนะค่าเฉลี่ยตลาด" เทียบกับหุ้นทุกตัวในเดือนเดียวกัน เพื่อตัดผลที่ตลาดทั้งตลาดขึ้นหรือลง
+      คะแนนระยะยาวทดสอบย้อนหลังไม่ได้ เพราะไม่มีงบการเงินย้อนหลังของทุกจุดเวลา และกลุ่มหุ้นที่ทดสอบคือหุ้นใหญ่ในปัจจุบัน ซึ่งทำให้ผลดูดีกว่าความจริงเล็กน้อย</div></section>`;
+}
+document.addEventListener('click', (e) => {
+  const rm = e.target.closest('[data-rm]'); if (rm) { rmWatch(rm.dataset.rm); return; }
+  const ad = e.target.closest('[data-wadd]'); if (ad) { const a = wSyms().filter((x) => x !== ad.dataset.wadd); a.push(ad.dataset.wadd); wSave(a); renderWatch(); return; }
+  const wf = e.target.closest('[data-wf]'); if (wf) { W.filter = wf.dataset.wf; W.more = false; renderScan(); return; }
+  const wm = e.target.closest('[data-wm]'); if (wm) { W.market = wm.dataset.wm; renderScan(); return; }
+  if (e.target.closest('[data-wmore]')) { W.more = !W.more; renderScan(); return; }
+  if (e.target.closest('#wAddBtn')) addWatch($('#wInput').value);
+});
+document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'wInput') addWatch(e.target.value); });
+
 async function liveGold() {
   const s = lastData?.gold?.signal;
   if (!s?.ok || s.method !== 'ref' || !s.refSpot) return;
@@ -1383,7 +1628,7 @@ setInterval(liveGold, 60 * 1000);
 $('#refresh').onclick = () => load(true);
 // ไฮไลต์เมนูตามหมวดที่กำลังอ่าน
 addEventListener('scroll', () => {
-  const ids = ['top', 'wallet', 'cost', 'invest', 'bonds', 'work', 'macro', 'accuracy', 'cheer'];
+  const ids = ['top', 'wallet', 'cost', 'invest', 'watch', 'bonds', 'work', 'macro', 'accuracy', 'cheer'];
   let cur = 'top';
   for (const id of ids) { const el = document.getElementById(id); if (el && el.getBoundingClientRect().top < 90) cur = id; }
   const ch = document.getElementById('cheer'); if (ch && ch.getBoundingClientRect().top < innerHeight * 0.5) cur = 'cheer';

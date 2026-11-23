@@ -270,3 +270,41 @@ export async function fetchThaiYields() {
   }
   return { rows, source: 'MOCK' };
 }
+
+// ---------- หุ้นรายตัว (ข้อมูลสมมติ) ----------
+const MOCK_TH = ['PTT', 'DELTA', 'ADVANC', 'GULF', 'AOT', 'KBANK', 'KTB', 'PTTEP', 'SCB', 'CPALL', 'TRUE', 'BBL', 'BDMS', 'CPN', 'SCC', 'CRC', 'PTTGC', 'BH', 'OR', 'CPF',
+  'GPSC', 'TOP', 'MINT', 'IVL', 'BEM', 'KTC', 'BJC', 'HMPRO', 'RATCH', 'TISCO'].map((s) => s + '.BK');
+const hash = (s) => [...s].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7);
+const seeded = (seed) => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 2 ** 32; };
+const SECT = ['Energy', 'Technology', 'Communication Services', 'Utilities', 'Industrials', 'Financial Services', 'Consumer Defensive', 'Healthcare', 'Real Estate', 'Basic Materials', 'Consumer Cyclical'];
+export async function fetchSetUniverse() { return MOCK_TH.map((s, i) => ({ symbol: s, name: s.replace('.BK', '') + ' PCL', cap: 1e12 / (i + 1) })); }
+function mockHist(s) {
+  const r = seeded(hash(s)), n = 760, drift = (r() - 0.45) * 0.0012, vol = 0.012 + r() * 0.02;
+  const d = [], c = [], h = [], l = [], v = [];
+  let p = s.startsWith('^') ? 1400 : 10 + r() * 200, day = new Date('2023-11-20');
+  // บางตัวให้ร่วงช่วงท้ายเพื่อทดสอบส่วน "ถ้าลง"
+  const crash = r() < 0.3;
+  for (let k = 0; k < n; k++) {
+    day = new Date(day.getTime() + 864e5); if ([0, 6].includes(day.getUTCDay())) { k--; continue; }
+    const z = (r() + r() + r() - 1.5) * 2;
+    p *= Math.exp(drift + vol * z + (crash && k > n - 50 ? -0.006 : 0) + 0.002 * Math.sin(k / 40));
+    d.push(day.toISOString().slice(0, 10)); c.push(+p.toFixed(2)); h.push(+(p * (1 + r() * 0.015)).toFixed(2)); l.push(+(p * (1 - r() * 0.015)).toFixed(2)); v.push(Math.round(1e6 * (0.5 + r())));
+  }
+  return { d, c, h, l, v, divs: [{ date: '2026-04-20', amount: +(p * 0.02).toFixed(2) }], currency: s.endsWith('.BK') || s === '^SET.BK' ? 'THB' : 'USD', name: s, exchange: s.endsWith('.BK') ? 'SET' : 'NMS' };
+}
+export async function fetchStockHistory(s) { return mockHist(s); }
+export async function fetchQuotes(symbols) {
+  return Object.fromEntries(symbols.map((s) => { const H = mockHist(s), p = H.c.at(-1); return [s, { price: p, prev: H.c.at(-2), time: Math.floor(Date.now() / 1000), name: s.replace('.BK', '') + (s.endsWith('.BK') ? ' Public Company Limited' : ' Inc.'), currency: H.currency }]; }));
+}
+export async function fetchStockProfile(s) {
+  const r = seeded(hash(s) + 99), loss = r() < 0.1;
+  return { name: s, sector: SECT[Math.floor(r() * SECT.length)], industry: 'ตัวอย่าง', cap: 1e11, pe: loss ? null : 6 + r() * 30, fpe: 6 + r() * 25, pb: 0.5 + r() * 4, dy: r() < 0.8 ? r() * 0.08 : null, payout: r() * 0.9,
+    beta: r() * 1.5, roe: loss ? -0.05 : r() * 0.25, roa: r() * 0.1, de: r() * 250, currentRatio: 0.6 + r() * 1.5, revGrowth: (r() - 0.35) * 0.4, epsGrowth: (r() - 0.4) * 0.6, margin: loss ? -0.03 : r() * 0.2,
+    opMargin: r() * 0.25, fcf: 1e9, target: mockHist(s).c.at(-1) * (0.85 + r() * 0.5), analysts: Math.floor(r() * 25), rec: 'buy', exDiv: null, earnings: Math.floor(Date.now() / 1000) + 20 * 86400, summary: 'ข้อมูลตัวอย่าง' };
+}
+export async function fetchStockFinancials(s) {
+  const r = seeded(hash(s) + 7), base = 1e10 * (1 + r()), g = (r() - 0.4) * 0.3;
+  const yrs = ['2022', '2023', '2024', '2025'];
+  return { annualTotalRevenue: yrs.map((y, i) => ({ date: `${y}-12-31`, value: base * (1 + g) ** i })), annualNetIncome: yrs.map((y, i) => ({ date: `${y}-12-31`, value: base * 0.08 * (1 + g * 1.5) ** i * (0.85 + r() * 0.3) })),
+    annualDilutedEPS: yrs.map((y, i) => ({ date: `${y}-12-31`, value: 2 * (1 + g) ** i })), annualFreeCashFlow: [], quarterlyTotalRevenue: [], quarterlyNetIncome: [] };
+}
