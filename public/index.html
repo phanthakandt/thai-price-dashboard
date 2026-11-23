@@ -298,6 +298,27 @@
     .pc, .meters { grid-template-columns: 1fr; }
     .w-head h2 { font-size: 16px; }
   }
+  /* ---------- หมวดหุบ/กาง ---------- */
+  .section > .grid.sec-body { margin-top: 0; }
+  .section.collapsed > .sec-body { display: none; }
+  .section:not(.collapsed) > .sec-sum { display: none; }
+  .sec-toggle { all: unset; cursor: pointer; display: flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; }
+  .sec-toggle:focus-visible { outline: 2px solid var(--series-1); outline-offset: 3px; border-radius: 4px; }
+  .sec-toggle h2 { margin: 0; }
+  .sec-toggle .chev { margin-left: auto; font-size: 18px; color: var(--text-muted); transition: transform .2s; }
+  .section.collapsed .chev { transform: rotate(-90deg); }
+  .sec-sum { margin: 8px 0 4px; padding: 10px 14px; background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; cursor: pointer; }
+  .sum-list { list-style: none; margin: 0; padding: 0; font-size: 14px; }
+  .sum-list li { padding: 4px 0; line-height: 1.55; }
+  .sum-list li > .tag, .sum-list li > .si { margin-right: 5px; }
+  .sum-list .tag { display: inline-block; font-size: 11px; padding: 1px 7px; border-radius: 999px; background: var(--grid); color: var(--text-secondary); white-space: nowrap; }
+  .sum-list .si { font-size: 11px; color: var(--text-muted); } .sum-list .si.up { color: var(--good); } .sum-list .si.down { color: var(--critical); }
+  .sum-hint { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .section { display: block; }
+  .section > .sec-body { margin-top: 12px; }
+  .nav-btn { flex: none; font-size: 13px; padding: 4px 12px; border-radius: 999px; margin-left: 4px; }
+  .w-more { margin-top: 8px; font-size: 13px; }
+  .w-card.compact .w-detail { display: none; }
   footer { margin-top: 24px; color: var(--text-muted); font-size: 12px; }
   footer a { color: var(--text-secondary); }
 </style>
@@ -314,6 +335,7 @@
   </header>
   <nav class="topnav" aria-label="หมวด">
     <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#bonds">ตราสารหนี้</a><a href="#watch">จับตาหุ้น</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a><a href="#cheer" class="nav-cheer">💕 เติมน้องสวี</a>
+    <button id="colAll" class="nav-btn" type="button" data-mode="open">กางทุกหมวด</button>
   </nav>
   <div id="banner"></div>
   <main class="grid" id="app"><div class="card span-12">กำลังโหลดข้อมูล…</div></main>
@@ -1150,8 +1172,17 @@ async function load(manual = false) {
     }
     charts.length = 0;
     const R = (k) => (d.forecast?.ranges || []).find((r) => r.key === k);
-    const sec = (id, title, sub) => `<div class="section-title span-12" id="${id}"><h2>${title}</h2>${sub ? `<div class="sub">${sub}</div>` : ''}</div>`;
-    $('#app').innerHTML = summaryCard(d.summary) + walletCard() +
+    // แต่ละหมวดหุบได้: ตอนหุบเห็นสรุปสั้นๆ ตอนกางเห็นเนื้อหาเต็ม (จำสถานะไว้ในเครื่อง)
+    let opened = false;
+    const sec = (id, title, sub) => {
+      const col = secCollapsed(id), head = `${opened ? '</div></div>' : ''}<div class="section span-12${col ? ' collapsed' : ''}" data-sec="${id}">
+        <div class="section-title" id="${id}"><button class="sec-toggle" type="button" aria-expanded="${!col}" aria-controls="body-${id}" data-sectoggle="${id}">
+          <h2>${title}</h2><span class="chev" aria-hidden="true">▾</span></button>${sub ? `<div class="sub">${sub}</div>` : ''}</div>
+        <div class="sec-sum" id="sum-${id}">${secSummary(id, d)}</div>
+        <div class="grid sec-body" id="body-${id}">`;
+      opened = true; return head;
+    };
+    $('#app').innerHTML = walletCard() +
       sec('cost', 'ค่าครองชีพ', 'น้ำมัน แก๊สหุงต้ม ค่าไฟ และเงินเฟ้อ: ตอนนี้เป็นอย่างไร สัญญาณบอกอะไร และข้างหน้าน่าจะเป็นอย่างไร') +
       d.oil.signals.map(signalOilCard).join('') + oilForecastCard(d.forecast) +
       oilCard(d.oil) + energyCard(d.energy) +
@@ -1179,11 +1210,12 @@ async function load(manual = false) {
       newsCard(d.news, ['econ'], 'ข่าวเศรษฐกิจและการค้า') +
       imfCard(d.forecast?.imf) +
       sec('accuracy', 'ความแม่นและย้อนหลัง', 'ตรวจว่าที่ระบบเคยบอก ถูกแค่ไหน') +
-      accuracyCard(d.accuracy) + '<div class="span-12 grid" id="watchBt"></div>' + archiveCard(d.archive);
+      accuracyCard(d.accuracy) + '<div class="span-12 grid" id="watchBt"></div>' + archiveCard(d.archive) + '</div></div>';
 
     renderWallet(d);
     nongUpdate(d);
     loadWatch();
+    updateColAll();
     const tr = d.macro?.trade;
     if (tr && $('#tradeChart')) {
       const rows = tr.rows.slice(-24), pt = (k) => rows.map((r) => ({ date: r.date, value: r[k] / 1000 }));
@@ -1424,7 +1456,7 @@ document.addEventListener('click', (e) => {
 
 // ---------- จับตาหุ้น ----------
 const WATCH_KEY = 'thai-price-watch-v1';
-const W = { sum: null, det: {}, filter: 'long', market: 'all', more: false, loading: null };
+const W = { sum: null, det: {}, filter: 'long', market: 'all', more: false, loading: null, open: new Set() };
 const SECTOR_TH = { 'Energy': 'พลังงาน', 'Financial Services': 'การเงิน/ธนาคาร', 'Technology': 'เทคโนโลยี', 'Consumer Defensive': 'สินค้าจำเป็น/ค้าปลีก',
   'Consumer Cyclical': 'สินค้าฟุ่มเฟือย', 'Industrials': 'อุตสาหกรรม/ขนส่ง', 'Utilities': 'ไฟฟ้า/สาธารณูปโภค', 'Real Estate': 'อสังหาริมทรัพย์',
   'Healthcare': 'การแพทย์', 'Basic Materials': 'วัสดุ/ปิโตรเคมี', 'Communication Services': 'สื่อสาร/โทรคมนาคม' };
@@ -1483,6 +1515,7 @@ function renderWatch() {
     <section class="card span-12" id="wScan"></section>`;
   for (const s of syms) renderStockCard(s);
   renderScan();
+  watchSummary();
 }
 function addWatch(raw) {
   const q = raw.trim().toUpperCase(); if (!q) return;
@@ -1546,11 +1579,15 @@ async function renderStockCard(sym) {
     return `<details class="more"><summary>งบย้อนหลัง ${yrs[0]}–${yrs.at(-1)}</summary><table><tr><th>ปี</th><th>รายได้</th><th>กำไรสุทธิ</th><th>อัตรากำไร</th></tr>
       ${F.revenue.map((x) => { const y = x.date.slice(0, 4), n = ni[y]; return `<tr><td>${+y + 543}</td><td>${bigNum(x.value)}</td><td>${n == null ? '–' : `<span class="${n < 0 ? 'down' : ''}">${bigNum(n)}</span>`}</td><td>${n != null && x.value ? fmt(n / x.value * 100, 1) + '%' : '–'}</td></tr>`; }).join('')}</table></details>`;
   })();
+  el.classList.add('w-card'); el.classList.toggle('compact', !W.open.has(d.s));
   el.innerHTML = `<div class="w-head"><div><h2>${esc(symShort(d.s))} <span class="muted" style="font-weight:400;font-size:13px">${esc(d.name || '')}</span></h2>
       <div class="muted" style="font-size:12px">${esc(SECTOR_TH[p.sector] || p.sector || '')}${p.industry ? ' · ' + esc(p.industry) : ''}${p.cap ? ' · มูลค่าตลาด ' + bigNum(p.cap) + (cur === 'USD' ? ' $' : ' บาท') : ''}</div></div>
       <div class="px"><b>${money(d.price, cur)}</b><div>${pctS(d.chg, 2)} วันนี้</div></div><button class="w-x" data-rm="${esc(d.s)}" aria-label="เลิกจับตา ${esc(symShort(d.s))}">×</button></div>
     <div class="verdict ${vc}">${vt}</div>
     <div class="meters">${meter('ระยะสั้น (1–3 เดือน)', a.short.score, sLbl)}${meter('ระยะยาว (1 ปีขึ้นไป)', a.long?.score ?? null, lLbl)}</div>
+    ${compactLine(d, a, cur)}
+    <button class="tab w-more" type="button" data-wopen="${esc(d.s)}" aria-expanded="${W.open.has(d.s)}">${W.open.has(d.s) ? 'ย่อ ▴' : 'ดูรายละเอียด ▾'}</button>
+    <div class="w-detail">
     <div class="chart" id="wc-${esc(d.s)}"></div>
     <div class="kv">${kv.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('')}</div>
     ${buyHtml(d, a, cur)}
@@ -1561,7 +1598,7 @@ async function renderStockCard(sym) {
     <div style="margin-top:10px;font-size:13px">${lv.resistance.length ? `<div><b>แนวต้าน</b> (จุดที่มักมีแรงขาย): ${lv.resistance.map(ld).join(' · ')}</div>` : ''}
       ${!f && lv.support.length ? `<div style="margin-top:3px"><b>แนวรับ</b>: ${lv.support.map(ld).join(' · ')}</div>` : ''}</div>
     ${finRows}
-    <div class="w-foot">ราคาถึง ${thDate(d.date)}${d.earnings ? ` · ประกาศงบครั้งถัดไปราว ${thDate(d.earnings * 1000)}` : ''}${p.exDiv && p.exDiv * 1000 > Date.now() ? ` · ขึ้น XD ${thDate(p.exDiv * 1000)}` : ''} · ข้อมูลพื้นฐานอัปเดต ${d.updated.prof ? thDate(d.updated.prof) : '–'}</div>`;
+    <div class="w-foot">ราคาถึง ${thDate(d.date)}${d.earnings ? ` · ประกาศงบครั้งถัดไปราว ${thDate(d.earnings * 1000)}` : ''}${p.exDiv && p.exDiv * 1000 > Date.now() ? ` · ขึ้น XD ${thDate(p.exDiv * 1000)}` : ''} · ข้อมูลพื้นฐานอัปเดต ${d.updated.prof ? thDate(d.updated.prof) : '–'}</div></div>`;
   const C = d.chart, pts = (arr) => C.d.map((x, i) => ({ date: x, value: arr[i] })).filter((x) => x.value != null);
   lineChart(document.getElementById('wc-' + d.s), [
     { name: 'ราคา', color: '--series-1', points: pts(C.c) },
@@ -1601,6 +1638,21 @@ function buyHtml(d, a, cur) {
     ${bt ? `<div class="muted" style="margin-top:6px">ทดสอบแผนระยะสั้นแบบนี้ย้อนหลัง ${bt.all.n.toLocaleString('th-TH')} ครั้ง: ถึงเป้า ${Math.round(bt.all.win * 100)}% โดนตัดขาดทุน ${Math.round(bt.all.loss * 100)}% กำไรเฉลี่ยต่อครั้ง ${pc(bt.all.avgRet)} <a href="#watchBt">ดูผลทดสอบ</a></div>` : ''}
     <div class="muted" style="margin-top:4px">เป็นราคาที่คำนวณจากสูตร ไม่ใช่คำแนะนำการลงทุน ควรแบ่งเงินซื้อหลายครั้งและไม่ใส่เงินทั้งหมดในหุ้นตัวเดียว</div></div>`;
 }
+// สรุปหนึ่งบรรทัดของการ์ดหุ้นตอนย่อ
+function compactLine(d, a, cur) {
+  const L = a.entry?.long, S = a.entry?.short, top = a.flags.find((f) => f.level === 'high') || a.flags[0];
+  const parts = [];
+  if (L) parts.push(`ซื้อระยะยาว <b>${money(L.lo, cur)}–${money(L.hi, cur)}</b>${['inside', 'below'].includes(L.status) ? ' <span class="up">✓ ถึงแล้ว</span>' : ` <span class="muted">(ต้องลงอีก ${fmt(L.gap / (1 + L.gap) * 100, 0)}%)</span>`}`);
+  if (S) parts.push(`ระยะสั้น ซื้อ ${money(S.entry, cur)} · ตัด <span class="down">${money(S.stop, cur)}</span> · เป้า <span class="up">${money(S.target, cur)}</span>${S.worth ? '' : ' <span class="muted">(ยังไม่คุ้ม)</span>'}`);
+  return `<div class="w-compact" style="font-size:13px;margin-top:6px">${parts.map((x) => `<div>${x}</div>`).join('')}${top ? `<div class="down" style="margin-top:2px">⚠ ${esc(top.text)}${a.flags.length > 1 ? ` <span class="muted">และอีก ${a.flags.length - 1} ข้อ</span>` : ''}</div>` : ''}</div>`;
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-wopen]'); if (!b) return;
+  const s = b.dataset.wopen, el = document.getElementById('w-' + s), open = !W.open.has(s);
+  open ? W.open.add(s) : W.open.delete(s);
+  el.classList.toggle('compact', !open); b.setAttribute('aria-expanded', String(open)); b.textContent = open ? 'ย่อ ▴' : 'ดูรายละเอียด ▾';
+  if (open) requestAnimationFrame(() => charts.forEach((c) => c()));
+});
 function renderScan() {
   const el = $('#wScan'); if (!el || !W.sum) return;
   const F = { long: ['น่าสนใจระยะยาว', (x) => ['long', 'both'].includes(x.v)], short: ['น่าสนใจระยะสั้น', (x) => ['short', 'both'].includes(x.v)],
@@ -1666,6 +1718,70 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('#wAddBtn')) addWatch($('#wInput').value);
 });
 document.addEventListener('keydown', (e) => { if (e.key === 'Enter' && e.target.id === 'wInput') addWatch(e.target.value); });
+
+// ---------- หุบ/กางหมวด ----------
+const COL_KEY = 'thai-price-collapsed-v1';
+const colState = () => { try { return JSON.parse(localStorage.getItem(COL_KEY)) || {}; } catch { return {}; } };
+// ค่าเริ่มต้น: หุบทุกหมวด ให้เห็นภาพรวมก่อน
+const secCollapsed = (id) => colState()[id] ?? true;
+function setCollapsed(id, col) {
+  const st = colState(); st[id] = col; try { localStorage.setItem(COL_KEY, JSON.stringify(st)); } catch {}
+  const el = document.querySelector(`.section[data-sec="${id}"]`); if (!el) return;
+  el.classList.toggle('collapsed', col);
+  el.querySelector('.sec-toggle')?.setAttribute('aria-expanded', String(!col));
+  if (!col) requestAnimationFrame(() => charts.forEach((c) => c())); // กราฟที่ซ่อนอยู่วาดใหม่ตามความกว้างจริง
+  updateColAll();
+}
+function updateColAll() {
+  const b = $('#colAll'); if (!b) return;
+  const anyOpen = [...document.querySelectorAll('.section')].some((x) => !x.classList.contains('collapsed'));
+  b.textContent = anyOpen ? 'หุบทุกหมวด' : 'กางทุกหมวด'; b.dataset.mode = anyOpen ? 'close' : 'open';
+}
+function secSummary(id, d) {
+  const S = d.summary || [], icon = (it) => `<span class="si ${it.dir === 0 ? '' : (it.dir > 0) !== !!it.cost ? 'up' : 'down'}">${it.dir > 0 ? '▲' : it.dir < 0 ? '▼' : '●'}</span>`;
+  // คาดการณ์ทองไปอยู่หมวดลงทุน คาดการณ์น้ำมันอยู่หมวดค่าครองชีพ
+  const isGoldF = (it) => it.tag === 'คาดการณ์' && /ทอง/.test(it.text);
+  const list = (tags, extra = [], keep = () => true) => {
+    const items = S.filter((it) => tags.includes(it.tag) && keep(it));
+    const li = items.map((it) => `<li><span class="tag">${esc(it.tag)}</span>${icon(it)}${esc(it.text)}</li>`).concat(extra.map((x) => `<li>${x}</li>`));
+    return li.length ? `<ul class="sum-list">${li.join('')}</ul>` : '';
+  };
+  const hint = '<div class="sum-hint">กดหัวข้อเพื่อดูรายละเอียด</div>';
+  if (id === 'cost') return list(['น้ำมัน', 'คาดการณ์', 'LPG', 'ค่าไฟ'], [], (it) => !isGoldF(it)) + hint;
+  if (id === 'invest') return list(['ทอง', 'คาดการณ์', 'ค่าเงิน', 'หุ้น', 'ตราสารหนี้', 'กลุ่มธุรกิจ'], [], (it) => it.tag !== 'คาดการณ์' || isGoldF(it)) + hint;
+  if (id === 'watch') return '<div class="muted">กำลังโหลดหุ้นที่จับตา…</div>';
+  if (id === 'work') return list(['การว่างงาน', 'อาชีพ']) + hint;
+  if (id === 'macro') {
+    const imf = (d.macro?.insights || []).find((x) => /^IMF คาด/.test(x)), g = d.macro?.goods?.insights?.[0];
+    return list(['การค้า'], [imf, g].filter(Boolean).map((x) => `<span class="tag">เศรษฐกิจ</span>${esc(x)}`)) + hint;
+  }
+  if (id === 'accuracy') {
+    const rows = (d.accuracy || []).filter((r) => r.rate != null).slice(0, 4);
+    return (rows.length ? `<ul class="sum-list">${rows.map((r) => `<li><span class="tag">${esc(r.topic)}</span>${esc(r.what)} <b>${Math.round(r.rate * 100)}%</b> <span class="muted">(${r.n} ครั้ง)</span></li>`).join('')}</ul>` : '') + hint;
+  }
+  return '';
+}
+// สรุปหมวดจับตาหุ้น: หุ้นที่จับตา ผลวิเคราะห์ และราคาซื้อระยะยาว
+function watchSummary() {
+  const el = $('#sum-watch'); if (!el || !W.sum) return;
+  const syms = wSyms().filter((s) => W.by[s]);
+  el.innerHTML = syms.length ? `<ul class="sum-list">${syms.map((s) => { const x = W.by[s];
+    return `<li><span class="tag">${esc(symShort(s))}</span>${money(x.px, x.cur)} ${pctS(x.chg, 2)} · <b class="${['both', 'long', 'short'].includes(x.v) ? 'up' : x.v === 'caution' ? 'down' : ''}">${VERDICT[x.v][0]}</b>${x.buyHi != null ? ` · ซื้อระยะยาว ≤ ${money(x.buyHi, x.cur)}${['inside', 'below'].includes(x.zone) ? ' <span class="up">✓ ถึงแล้ว</span>' : ''}` : ''}</li>`; }).join('')}</ul><div class="sum-hint">กดหัวข้อเพื่อดูรายละเอียดและเพิ่ม/ลบหุ้น</div>`
+    : '<div class="muted">ยังไม่มีหุ้นที่จับตา กดหัวข้อเพื่อเพิ่ม</div>';
+}
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-sectoggle]');
+  if (t) { const id = t.dataset.sectoggle; setCollapsed(id, !document.querySelector(`.section[data-sec="${id}"]`).classList.contains('collapsed')); return; }
+  const sm = e.target.closest('.sec-sum'); if (sm && !e.target.closest('a,button')) { setCollapsed(sm.closest('.section').dataset.sec, false); return; }
+  if (e.target.closest('#colAll')) { const close = $('#colAll').dataset.mode === 'close'; document.querySelectorAll('.section').forEach((x) => setCollapsed(x.dataset.sec, close)); return; }
+  // ลิงก์ที่พาไปยังเนื้อหาในหมวดที่หุบอยู่: กางหมวดนั้นก่อน
+  const a = e.target.closest('a[href^="#"]');
+  if (a && a.getAttribute('href').length > 1) {
+    const target = document.getElementById(a.getAttribute('href').slice(1));
+    const sec = target?.closest('.section.collapsed');
+    if (sec && !target.classList.contains('section-title')) setCollapsed(sec.dataset.sec, false);
+  }
+}, true);
 
 async function liveGold() {
   const s = lastData?.gold?.signal;
