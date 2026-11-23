@@ -1469,6 +1469,7 @@ function renderWatch() {
       <div class="explain">ระบบให้คะแนน 2 แบบ: <b>ระยะสั้น</b> (1–3 เดือน) ดูจากแนวโน้มราคา แรงซื้อขาย และความแข็งแกร่งเทียบตลาด
         <b>ระยะยาว</b> (1 ปีขึ้นไป) ดูจากราคาถูกหรือแพงเทียบกลุ่มเดียวกัน ความสามารถทำกำไร หนี้ การเติบโต และปันผล
         เป็นการคัดกรองด้วยสูตรที่เปิดเผยได้ ไม่ใช่คำแนะนำการลงทุน ราคาจาก Yahoo Finance ดีเลย์ราว 15–20 นาที</div>
+      ${btNote()}
     </section>
     ${syms.map((s) => `<section class="card span-6" id="w-${esc(s)}"><div class="muted">กำลังโหลด ${esc(symShort(s))}…</div></section>`).join('')}
     <section class="card span-12" id="wScan"></section>`;
@@ -1581,6 +1582,14 @@ function renderScan() {
     ${total > 15 ? `<button class="tab" style="margin-top:8px" data-wmore="1">${W.more ? 'แสดงน้อยลง' : `ดูทั้งหมด ${total} ตัว`}</button>` : ''}
     <div class="explain">คะแนน 65 ขึ้นไปถือว่าน่าสนใจ ต่ำกว่า 45 ถือว่าอ่อน "ควรระวัง" คือมีสัญญาณเสี่ยงสูง เช่น ขาดทุน ราคาร่วงหนักจากจุดสูงสุด หรือคะแนนต่ำทั้งสองด้าน
       กด + เพื่อเพิ่มเข้ารายการจับตา</div>`;
+}
+// ผลทดสอบย้อนหลังของคะแนนระยะสั้น สรุปสั้นๆ ให้เห็นในหน้าจับตาด้วย
+function btNote() {
+  const top = W.sum?.backtest?.all?.buckets?.at(-1); if (!top) return '';
+  const good = top.beat > 0.55;
+  return `<div class="${good ? 'explain' : 'flags'}" style="margin-top:8px">${good ? '' : '<b>ข้อควรรู้:</b> '}ทดสอบย้อนหลัง หุ้นที่ได้คะแนนระยะสั้น 65 ขึ้นไป ชนะค่าเฉลี่ยตลาดในเดือนถัดมา ${Math.round(top.beat * 100)}% ของครั้ง
+    ${good ? 'ใช้ช่วยคัดหุ้นได้ระดับหนึ่ง' : 'ซึ่งไม่ดีกว่าการสุ่ม คะแนนระยะสั้นจึงบอกได้แค่ "ตอนนี้แนวโน้มเป็นอย่างไร" แต่ทำนายเดือนหน้าไม่ได้ ใช้ประกอบกับคะแนนระยะยาวและสัญญาณเตือน'}
+    <a href="#watchBt">ดูผลทดสอบ</a></div>`;
 }
 function renderWatchBt() {
   const el = $('#watchBt'), bt = W.sum?.backtest?.all; if (!el) return;
