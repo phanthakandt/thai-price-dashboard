@@ -277,6 +277,14 @@
   .fall h3 { font-size: 14px; margin: 0 0 6px; }
   .fall .chk { list-style: none; padding: 0; margin: 6px 0 0; } .fall .chk li { margin: 2px 0; }
   .fall .chk .ok { color: var(--good); } .fall .chk .no { color: var(--text-muted); }
+  .buy { margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: color-mix(in srgb, var(--series-1) 7%, transparent); font-size: 13px; }
+  .buy h3 { font-size: 14px; margin: 0 0 6px; }
+  .buy .row { display: grid; grid-template-columns: 92px 1fr; gap: 8px; margin-top: 6px; }
+  .buy .row > b { font-size: 13px; }
+  .buy .big { font-size: 15px; font-weight: 700; }
+  .buy .nums { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .buy .nums span { white-space: nowrap; }
+  @media (max-width: 600px) { .buy .row { grid-template-columns: 1fr; gap: 2px; } }
   .w-foot { margin-top: 8px; font-size: 11.5px; color: var(--text-muted); }
   .w-filter { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
   .w-filter .tab { font-size: 13px; padding: 4px 12px; }
@@ -1545,6 +1553,7 @@ async function renderStockCard(sym) {
     <div class="meters">${meter('ระยะสั้น (1–3 เดือน)', a.short.score, sLbl)}${meter('ระยะยาว (1 ปีขึ้นไป)', a.long?.score ?? null, lLbl)}</div>
     <div class="chart" id="wc-${esc(d.s)}"></div>
     <div class="kv">${kv.map(([k, v]) => `<div>${k}<b>${v}</b></div>`).join('')}</div>
+    ${buyHtml(d, a, cur)}
     ${a.pros.length || a.cons.length ? `<div class="pc"><div><h3 class="up">จุดเด่น</h3><ul>${a.pros.map((x) => `<li>${esc(x)}</li>`).join('') || '<li class="muted">ยังไม่มีจุดเด่นที่ชัดเจน</li>'}</ul></div>
       <div><h3 class="down">จุดด้อย</h3><ul>${a.cons.map((x) => `<li>${esc(x)}</li>`).join('') || '<li class="muted">ไม่พบจุดด้อยที่ชัดเจน</li>'}</ul></div></div>` : ''}
     ${a.flags.length ? `<div class="flags"><b>⚠ ต้องระวัง</b><ul>${a.flags.map((x) => `<li>${x.level === 'high' ? '<b>' + esc(x.text) + '</b>' : esc(x.text)}</li>`).join('')}</ul></div>` : ''}
@@ -1561,23 +1570,56 @@ async function renderStockCard(sym) {
   ], { height: 170, xLabel: thMonth, label: `ราคา ${symShort(d.s)} 1 ปี` });
 }
 
+// ราคาที่น่าเข้าซื้อ: ระยะยาวจากมูลค่าประเมิน ระยะสั้นจากแนวรับ/แนวต้าน
+function buyHtml(d, a, cur) {
+  const e = a.entry; if (!e) return '';
+  const px = d.price, pc = (v) => `${v >= 0 ? '+' : '−'}${fmt(Math.abs(v * 100), 1)}%`;
+  const L = e.long, S = e.short, fv = a.fair, bt = W.sum?.backtest?.entry;
+  let longHtml = '<span class="muted">ข้อมูลไม่พอประเมิน</span>';
+  if (L) {
+    const st = L.status === 'below' ? `<span class="up">ราคาตอนนี้ต่ำกว่าโซนแล้ว</span> ถูกกว่ามูลค่าประเมินเกิน 20% ควรเช็กก่อนว่ามีข่าวร้ายหรือกำไรกำลังจะลดหรือไม่`
+      : L.status === 'inside' ? '<span class="up">ราคาตอนนี้อยู่ในโซนแล้ว</span> ทยอยซื้อได้ ไม่ควรซื้อทีเดียวหมด'
+      : `ยังสูงกว่าโซน ต้องลงอีก ${fmt(L.gap / (1 + L.gap) * 100, 1)}% จึงถึงราคาบนของโซน`;
+    longHtml = `<div class="big">${money(L.lo, cur)} – ${money(L.hi, cur)}</div>
+      <div>${L.basis === 'value' ? `ต่ำกว่ามูลค่าที่ประเมินได้ (${money(L.fair, cur)}, ${pc(L.upside)} จากราคาตอนนี้) 10–20% เพื่อเผื่อการประเมินผิด` : 'ไม่มีข้อมูลกำไรพอประเมินมูลค่า จึงใช้แนวรับหลัก (เส้นค่าเฉลี่ย 200 วัน หรือจุดต่ำเดิม) แทน'}</div>
+      <div style="margin-top:2px">${st}</div>
+      ${fv?.methods?.length ? `<details class="more" style="margin-top:4px"><summary>ประเมินมูลค่าจาก ${fv.methods.length} วิธี</summary><ul style="margin:4px 0 0;padding-left:18px">${fv.methods.map((m) => `<li>${esc(m.name)}: ${money(m.value, cur)}${m.value < px * 0.4 || m.value > px * 2.5 ? ' <span class="muted">(ห่างจากราคาตลาดมากผิดปกติ ไม่นำมาใช้)</span>' : ''}</li>`).join('')}</ul></details>` : ''}`;
+  }
+  const warn = a.verdict === 'caution' ? '<div class="down" style="margin-top:4px">หุ้นตัวนี้มีสัญญาณเตือน ควรอ่านข้อ "ต้องระวัง" ก่อนตั้งราคาซื้อ</div>' : '';
+  const sNote = !S.worth ? `<span class="down">กำไรที่คาดหวังเทียบความเสี่ยงต่ำ (${fmt(S.rr, 1)} เท่า) ยังไม่คุ้มที่จะเข้าตอนนี้</span>`
+    : !S.uptrend && a.fall ? `ยังเป็นขาลง ควรรอสัญญาณฟื้นอย่างน้อย 3 ใน 6 ข้อก่อน (ตอนนี้ ${a.fall.met}/6)`
+    : S.near ? '<span class="up">ราคาตอนนี้ใกล้จุดซื้อแล้ว</span>' : `รอราคาย่อลงมาอีก ${fmt(S.dist / (1 + S.dist) * 100, 1)}%`;
+  return `<div class="buy"><h3>💰 ราคาที่น่าเข้าซื้อ</h3>
+    <div class="row"><b>ระยะยาว<br><span class="muted" style="font-weight:400">ทยอยสะสม</span></b><div>${longHtml}</div></div>
+    <div class="row"><b>ระยะสั้น<br><span class="muted" style="font-weight:400">เก็งรอบ</span></b><div>
+      <div class="nums"><span>ซื้อแถว <b>${money(S.entry, cur)}</b> <span class="muted">(${pc(S.entry / px - 1)})</span></span>
+        <span>ตัดขาดทุน <b class="down">${money(S.stop, cur)}</b> <span class="muted">(${pc(S.stop / S.entry - 1)})</span></span>
+        <span>เป้าขาย <b class="up">${money(S.target, cur)}</b> <span class="muted">(${pc(S.target / S.entry - 1)})</span></span></div>
+      <div class="muted" style="margin-top:2px">ซื้อที่${esc(S.entryKind)} · เป้าที่${esc(S.targetKind)} · กำไรที่คาดหวังต่อความเสี่ยง ${fmt(S.rr, 1)} เท่า</div>
+      <div style="margin-top:2px">${sNote}</div></div></div>
+    ${warn}
+    ${bt ? `<div class="muted" style="margin-top:6px">ทดสอบแผนระยะสั้นแบบนี้ย้อนหลัง ${bt.all.n.toLocaleString('th-TH')} ครั้ง: ถึงเป้า ${Math.round(bt.all.win * 100)}% โดนตัดขาดทุน ${Math.round(bt.all.loss * 100)}% กำไรเฉลี่ยต่อครั้ง ${pc(bt.all.avgRet)} <a href="#watchBt">ดูผลทดสอบ</a></div>` : ''}
+    <div class="muted" style="margin-top:4px">เป็นราคาที่คำนวณจากสูตร ไม่ใช่คำแนะนำการลงทุน ควรแบ่งเงินซื้อหลายครั้งและไม่ใส่เงินทั้งหมดในหุ้นตัวเดียว</div></div>`;
+}
 function renderScan() {
   const el = $('#wScan'); if (!el || !W.sum) return;
   const F = { long: ['น่าสนใจระยะยาว', (x) => ['long', 'both'].includes(x.v)], short: ['น่าสนใจระยะสั้น', (x) => ['short', 'both'].includes(x.v)],
+    zone: ['อยู่ในโซนซื้อระยะยาว', (x) => x.zoneBasis === 'value' && ['inside', 'below'].includes(x.zone) && x.v !== 'caution'],
     caution: ['ควรระวัง', (x) => x.v === 'caution'], fall: ['กำลังลง', (x) => x.fall], all: ['ทั้งหมด', () => true] };
   const M = { all: 'ทุกตลาด', TH: 'หุ้นไทย', US: 'ต่างประเทศ' };
-  const sortK = { long: (x) => -(x.ls ?? -1), short: (x) => -x.ss, caution: (x) => (x.ls ?? 50) + x.ss, fall: (x) => x.r1m, all: (x) => -(x.cap ?? 0) };
+  const sortK = { long: (x) => -(x.ls ?? -1), short: (x) => -x.ss, zone: (x) => (x.fair ? x.px / x.fair : 9), caution: (x) => (x.ls ?? 50) + x.ss, fall: (x) => x.r1m, all: (x) => -(x.cap ?? 0) };
   const watched = new Set(wSyms());
   let rows = W.sum.list.filter(F[W.filter][1]).filter((x) => W.market === 'all' || x.m === W.market).sort((a, b) => sortK[W.filter](a) - sortK[W.filter](b));
   const total = rows.length; if (!W.more) rows = rows.slice(0, 15);
   el.innerHTML = `<div class="card-head"><h2>สแกนหุ้นทั้งหมด</h2><span class="muted">หุ้นไทยใหญ่ ${W.sum.universe.th} ตัว + ต่างประเทศ ${W.sum.universe.us} ตัว</span></div>
     <div class="w-filter" role="tablist">${Object.entries(F).map(([k, [n]]) => `<button class="tab${W.filter === k ? ' on' : ''}" data-wf="${k}">${n} (${W.sum.list.filter(F[k][1]).filter((x) => W.market === 'all' || x.m === W.market).length})</button>`).join('')}</div>
     <div class="w-filter">${Object.entries(M).map(([k, n]) => `<button class="tab${W.market === k ? ' on' : ''}" data-wm="${k}">${n}</button>`).join('')}</div>
-    <table class="scan" style="margin-top:10px"><tr><th>หุ้น</th><th>ราคา</th><th>1 เดือน</th><th>สั้น</th><th>ยาว</th><th class="hide-sm">ผลวิเคราะห์ / ข้อควรระวัง</th><th></th></tr>
+    <table class="scan" style="margin-top:10px"><tr><th>หุ้น</th><th>ราคา</th><th>1 เดือน</th><th>สั้น</th><th>ยาว</th><th class="hide-sm">ซื้อระยะยาวที่</th><th class="hide-sm">ผลวิเคราะห์ / ข้อควรระวัง</th><th></th></tr>
       ${rows.map((x) => `<tr><td><b>${esc(symShort(x.s))}</b><div class="muted" style="font-size:11.5px">${esc(SECTOR_TH[x.sec] || x.sec || '')}</div></td>
         <td>${money(x.px, x.cur)}</td><td>${pctS(x.r1m)}</td><td><span class="sc ${scCls(x.ss)}">${x.ss}</span></td><td><span class="sc ${scCls(x.ls)}">${x.ls ?? '–'}</span></td>
+        <td class="hide-sm">${x.buyHi == null ? '–' : `≤ ${money(x.buyHi, x.cur)}${['inside', 'below'].includes(x.zone) ? ' <span class="up">✓ ถึงแล้ว</span>' : `<div class="muted" style="font-size:11.5px">ต้องลงอีก ${fmt((1 - x.buyHi / x.px) * 100, 0)}%</div>`}`}</td>
         <td class="hide-sm">${VERDICT[x.v][0]}${x.flTop ? `<div class="muted" style="font-size:12px">⚠ ${esc(x.flTop)}</div>` : ''}</td>
-        <td>${watched.has(x.s) ? '<span class="muted">✓</span>' : `<button class="add" data-wadd="${esc(x.s)}" aria-label="จับตา ${esc(symShort(x.s))}">+</button>`}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">ไม่มีหุ้นในกลุ่มนี้</td></tr>'}
+        <td>${watched.has(x.s) ? '<span class="muted">✓</span>' : `<button class="add" data-wadd="${esc(x.s)}" aria-label="จับตา ${esc(symShort(x.s))}">+</button>`}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">ไม่มีหุ้นในกลุ่มนี้</td></tr>'}
     </table>
     ${total > 15 ? `<button class="tab" style="margin-top:8px" data-wmore="1">${W.more ? 'แสดงน้อยลง' : `ดูทั้งหมด ${total} ตัว`}</button>` : ''}
     <div class="explain">คะแนน 65 ขึ้นไปถือว่าน่าสนใจ ต่ำกว่า 45 ถือว่าอ่อน "ควรระวัง" คือมีสัญญาณเสี่ยงสูง เช่น ขาดทุน ราคาร่วงหนักจากจุดสูงสุด หรือคะแนนต่ำทั้งสองด้าน
@@ -1603,6 +1645,14 @@ function renderWatchBt() {
       `กลุ่มคะแนนสูงชนะค่าเฉลี่ยตลาดในเดือนเดียวกัน ${Math.round(top.beat * 100)}% ของครั้ง ${top.beat > 0.55 ? 'คะแนนช่วยคัดหุ้นได้จริงระดับหนึ่ง' : top.beat > 0.5 ? 'ดีกว่าการสุ่มเล็กน้อย ใช้ประกอบเท่านั้น' : 'ยังไม่ดีกว่าการสุ่ม ไม่ควรใช้เป็นเหตุผลหลัก'}`], 'ผลทดสอบ')}
     ${tbl(bt)}
     ${th ? `<details class="more"><summary>เฉพาะหุ้นไทย</summary>${tbl(th)}</details>` : ''}
+    ${(() => { const be = W.sum.backtest.entry; if (!be) return ''; const row = (n, x) => x ? `<tr><td>${n}</td><td>${x.n.toLocaleString('th-TH')}</td><td>${Math.round(x.win * 100)}%</td><td>${Math.round(x.loss * 100)}%</td><td>${pctS(x.avgRet, 2)}</td><td class="hide-sm">${pctS(x.hold, 2)}</td></tr>` : '';
+      return `<h3 style="margin:16px 0 4px;font-size:15px">แผน "ราคาที่น่าเข้าซื้อ" ระยะสั้น</h3>
+      <div class="muted" style="font-size:13px">ตั้งราคาซื้อ ตัดขาดทุน และเป้าขาย ณ สิ้นแต่ละเดือนในอดีต แล้วดู 40 วันทำการถัดไป ได้ราคาซื้อตามที่ตั้ง ${Math.round(be.fillRate * 100)}% ของ ${be.samples.toLocaleString('th-TH')} ครั้ง</div>
+      <table><tr><th>แผน</th><th>ได้ซื้อ</th><th>ถึงเป้าขาย</th><th>โดนตัดขาดทุน</th><th>กำไรเฉลี่ยต่อครั้ง</th><th class="hide-sm">ถ้าซื้อราคาตลาดแล้วถือ 40 วัน</th></tr>
+        ${row('ทุกครั้ง', be.all)}${row('เฉพาะที่กำไรคาดหวัง ≥ 1.5 เท่าของความเสี่ยง', be.worth)}</table>
+      <div class="explain">ถ้าวันเดียวกันราคาแตะทั้งจุดตัดขาดทุนและเป้าขาย นับว่าโดนตัดขาดทุน (มองแง่ร้ายไว้ก่อน) ยังไม่หักค่าธรรมเนียมซื้อขาย
+        ส่วนที่ไม่ถึงทั้งเป้าและจุดตัดขาดทุนใน 40 วัน คิดกำไรขาดทุนที่ราคาปิดวันสุดท้าย
+        โซนซื้อระยะยาวทดสอบย้อนหลังไม่ได้ เพราะต้องใช้งบการเงินในอดีต</div>`; })()}
     <div class="explain">ทดสอบโดยคำนวณคะแนนระยะสั้น ณ สิ้นแต่ละเดือนในอดีตด้วยข้อมูลที่มีในวันนั้นเท่านั้น แล้วดูราคา 1 เดือนถัดมา
       "ชนะค่าเฉลี่ยตลาด" เทียบกับหุ้นทุกตัวในเดือนเดียวกัน เพื่อตัดผลที่ตลาดทั้งตลาดขึ้นหรือลง
       คะแนนระยะยาวทดสอบย้อนหลังไม่ได้ เพราะไม่มีงบการเงินย้อนหลังของทุกจุดเวลา และกลุ่มหุ้นที่ทดสอบคือหุ้นใหญ่ในปัจจุบัน ซึ่งทำให้ผลดูดีกว่าความจริงเล็กน้อย</div></section>`;

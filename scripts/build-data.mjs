@@ -81,7 +81,13 @@ writeFileSync(path.join(OUT, '.nojekyll'), '');
     console.log('หุ้นจับตา    ', `วิเคราะห์ ${L.length} ตัว (ขาด ${st.log.missing}) · ดึงใหม่ ราคา ${st.log.hist} พื้นฐาน ${st.log.prof} งบ ${st.log.fin} · ${Math.round(st.log.ms / 1000)} วินาที`,
       `· ทั้งคู่ ${cnt('both')} ยาว ${cnt('long')} สั้น ${cnt('short')} รอ ${cnt('wait')} ระวัง ${cnt('caution')} · ล้มเหลว ${st.log.fail.length}`);
     for (const f of st.log.fail.slice(0, 6)) console.log('   ✗', f);
-    for (const x of L.filter((x) => DEFAULT_WATCH.includes(x.s))) console.log(`   ${x.s.padEnd(10)} ${x.px} สั้น ${x.ss} ยาว ${x.ls ?? '-'} → ${x.v}${x.flTop ? ' ⚠ ' + x.flTop : ''}`);
+    for (const x of L.filter((x) => DEFAULT_WATCH.includes(x.s))) {
+      const e = st.details[x.s].analysis.entry;
+      console.log(`   ${x.s.padEnd(10)} ${x.px} สั้น ${x.ss} ยาว ${x.ls ?? '-'} → ${x.v}${x.flTop ? ' ⚠ ' + x.flTop : ''} | มูลค่า ${x.fair?.toFixed(2) ?? '-'} โซนยาว ${e.long ? e.long.lo.toFixed(2) + '–' + e.long.hi.toFixed(2) + ' ' + e.long.status : '-'} | สั้น ซื้อ ${e.short.entry.toFixed(2)} ตัด ${e.short.stop.toFixed(2)} เป้า ${e.short.target.toFixed(2)} RR ${e.short.rr.toFixed(1)}`);
+    }
+    const be = st.summary.backtest?.entry;
+    if (be) console.log('   backtest แผนซื้อ', `ตัวอย่าง ${be.samples} ได้ราคา ${Math.round(be.fillRate * 100)}% | ทั้งหมด n=${be.all.n} ชนะ ${Math.round(be.all.win * 100)}% แพ้ ${Math.round(be.all.loss * 100)}% เฉลี่ย ${be.all.avgR.toFixed(2)}R กำไรเฉลี่ย ${(be.all.avgRet * 100).toFixed(2)}% vs ถือเฉยๆ ${(be.all.hold * 100).toFixed(2)}%`,
+      be.worth ? `| RR≥1.5 n=${be.worth.n} ชนะ ${Math.round(be.worth.win * 100)}% เฉลี่ย ${be.worth.avgR.toFixed(2)}R กำไร ${(be.worth.avgRet * 100).toFixed(2)}%` : '');
     const bt = st.summary.backtest?.all;
     if (bt) console.log('   backtest', `n=${bt.n} ${bt.from}–${bt.to}`, bt.buckets.map((b) => `${b.name}: n=${b.n} 1ด.เฉลี่ย ${(b.avg * 100).toFixed(2)}% ส่วนเกิน ${(b.excess * 100).toFixed(2)}% ชนะตลาด ${Math.round(b.beat * 100)}%`).join(' | '));
   } catch (e) { console.log('หุ้นจับตา     ล้มเหลว', e.stack); }
