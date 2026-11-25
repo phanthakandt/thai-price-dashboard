@@ -220,7 +220,7 @@
   .nong-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--grid); }
   .nong-head img { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; }
   .nong-head .t { flex: 1; font-size: 14px; font-weight: 600; }
-  .nong-head .t span { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); }
+  .nong-head .t #nongSub { display: block; font-size: 12px; font-weight: 400; color: var(--text-muted); }
   .nong-head button { border: 0; background: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 4px 8px; }
   .nong-body { overflow-y: auto; padding: 6px 14px 12px; -webkit-overflow-scrolling: touch; }
   .nong-say { margin: 8px 0 10px; padding: 8px 10px; border-radius: 10px; background: var(--grid); font-size: 13px; }
@@ -319,6 +319,20 @@
   .nav-btn { flex: none; font-size: 13px; padding: 4px 12px; border-radius: 999px; margin-left: 4px; }
   .w-more { margin-top: 8px; font-size: 13px; }
   .w-card.compact .w-detail { display: none; }
+  .nong-tabs { display: flex; gap: 6px; padding: 8px 14px 0; }
+  .nong-tabs button { flex: 1; font-size: 13px; padding: 6px 8px; border-radius: 999px; border: 1px solid var(--grid); background: none; color: var(--text-secondary); cursor: pointer; }
+  .nong-tabs button[aria-selected="true"] { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
+  .learn-q { width: 100%; box-sizing: border-box; margin-top: 8px; font: inherit; font-size: 14px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--grid); background: var(--surface-1); color: var(--text-primary); }
+  .learn-h { margin: 12px 0 4px; font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: none; }
+  details.learn { border-top: 1px solid var(--grid); padding: 7px 0; font-size: 13.5px; }
+  details.learn summary { cursor: pointer; list-style: none; } details.learn summary::-webkit-details-marker { display: none; }
+  details.learn summary::before { content: '▸ '; color: var(--text-muted); } details.learn[open] summary::before { content: '▾ '; }
+  details.learn[open] { background: color-mix(in srgb, var(--series-1) 5%, transparent); border-radius: 8px; padding: 7px 8px; }
+  .learn .lw { margin: 6px 0 4px; line-height: 1.55; }
+  .learn .lr { display: grid; grid-template-columns: 34px 1fr; gap: 6px; margin-top: 4px; line-height: 1.5; }
+  .learn .ll { font-size: 11px; font-weight: 700; text-align: center; border-radius: 6px; padding: 1px 0; height: fit-content; }
+  .learn .ll.hi { background: color-mix(in srgb, var(--series-1) 15%, transparent); } .learn .ll.lo { background: var(--grid); } .learn .ll.tp { background: none; font-size: 13px; }
+  a.lk { color: inherit; text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
   footer { margin-top: 24px; color: var(--text-muted); font-size: 12px; }
   footer a { color: var(--text-secondary); }
 </style>
@@ -334,7 +348,7 @@
       <div class="muted" id="refreshMsg" role="status" aria-live="polite"></div></div>
   </header>
   <nav class="topnav" aria-label="หมวด">
-    <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#bonds">ตราสารหนี้</a><a href="#watch">จับตาหุ้น</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a><a href="#cheer" class="nav-cheer">💕 เติมน้องสวี</a>
+    <a href="#top">สรุป</a><a href="#wallet">กระเป๋าเงิน</a><a href="#cost">ค่าครองชีพ</a><a href="#invest">เงินออม/ลงทุน</a><a href="#bonds">ตราสารหนี้</a><a href="#watch">จับตาหุ้น</a><a href="#work">งาน</a><a href="#macro">เศรษฐกิจ</a><a href="#accuracy">ความแม่น</a><a href="#cheer" class="nav-cheer">💕 เติม cici</a>
     <button id="colAll" class="nav-btn" type="button" data-mode="open">กางทุกหมวด</button>
   </nav>
   <div id="banner"></div>
@@ -363,7 +377,8 @@
   <div class="nong-bubble" id="nongBubble" role="status" aria-live="polite"></div>
 </div>
 <div class="nong-panel" id="nongPanel" role="dialog" aria-label="ข่าวล่าสุด" hidden>
-  <div class="nong-head"><img src="img/nong.jpg" alt=""><div class="t">น้องสรุปข่าวมาให้แล้ว<span id="nongSub"></span></div><button id="nongClose" aria-label="ปิด">×</button></div>
+  <div class="nong-head"><img src="img/nong.jpg" alt=""><div class="t"><span id="nongTitle">น้องสรุปข่าวมาให้แล้ว</span><span id="nongSub"></span></div><button id="nongClose" aria-label="ปิด">×</button></div>
+  <div class="nong-tabs" role="tablist"><button type="button" role="tab" data-ntab="news" aria-selected="true">📰 ข่าว</button><button type="button" role="tab" data-ntab="learn" aria-selected="false">📚 ความรู้หุ้น</button></div>
   <div class="nong-body" id="nongBody"></div>
   <div class="nong-jump" id="nongJump"></div>
 </div>
@@ -1358,6 +1373,9 @@ function nongMessages(d) {
   };
   for (const x of (d.summary || []).filter((x) => x.dir).slice(0, 6)) M.push({ html: `${esc(x.text)}${tone(x)}`, href: NONG_SEC[x.tag] });
   for (const n of news.slice(0, 4)) M.push({ html: `<span class="nong-tag">${esc(NONG_NEWS[n.key] || 'ข่าว')}</span>${esc(n.title)}`, link: n.link });
+  // แทรกความรู้หุ้น 1 เรื่อง สุ่มเปลี่ยนทุกครั้งที่โหลด
+  const tips = GLOSSARY.filter((x) => x.what.length < 140), tp = tips[Math.floor(Math.random() * tips.length)];
+  if (tp) M.splice(Math.min(2, M.length), 0, { html: `รู้ไหม? <b>${esc(tp.name)}</b> คือ${esc(tp.what.replace(/^คือ/, ''))} 📚`, learn: tp.id });
   if (!M.length) M.push({ html: 'วันนี้ยังเงียบๆ อยู่นะ ดูภาพรวมก่อนไหม 😊', href: '#top' });
   return M;
 }
@@ -1365,7 +1383,7 @@ function nongSay(k) {
   const b = $('#nongBubble'), m = nong.msgs[k % nong.msgs.length];
   if (!m || !$('#nongPanel').hidden) return;
   b.innerHTML = `<span class="who">น้องบอกว่า</span>${m.html}`;
-  b.onclick = () => { if (m.link) window.open(m.link, '_blank', 'noopener'); else if (m.href) { document.querySelector(m.href)?.scrollIntoView({ behavior: 'smooth' }); } else nongOpen(); b.classList.remove('show'); };
+  b.onclick = () => { if (m.learn) nongOpen('learn', m.learn); else if (m.link) window.open(m.link, '_blank', 'noopener'); else if (m.href) { document.querySelector(m.href)?.scrollIntoView({ behavior: 'smooth' }); } else nongOpen(); b.classList.remove('show'); };
   b.classList.add('show');
   clearTimeout(nong.hideT); nong.hideT = setTimeout(() => b.classList.remove('show'), 10000);
 }
@@ -1374,21 +1392,150 @@ function nongBadge() {
   el.hidden = !n; el.textContent = n > 9 ? '9+' : n;
   $('#nongBtn').setAttribute('aria-label', n ? `มีข่าวใหม่ ${n} ข่าว เปิดดู` : 'เปิดข่าวล่าสุด');
 }
-function nongOpen() {
-  const d = nong.d; if (!d) return;
-  const since = nongSince(), news = nongNews(d).slice(0, 15);
-  const ago = (t) => { if (!t) return ''; const h = (Date.now() - t) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} นาทีก่อน` : h < 24 ? `${Math.round(h)} ชม.ก่อน` : `${Math.round(h / 24)} วันก่อน`; };
-  const say = (d.summary || []).filter((x) => x.dir).slice(0, 4);
-  $('#nongSub').textContent = `${news.filter((n) => (n.time || 0) > since).length || 'ไม่มี'}ข่าวใหม่ตั้งแต่ครั้งก่อน`.replace(/^(\d+)/, '$1 ');
-  $('#nongBody').innerHTML = (say.length ? `<div class="nong-say"><b>สรุปสั้นๆ ก่อนนะ</b><ul>${say.map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul></div>` : '') +
-    (news.length ? news.map((n) => `<a class="nong-item" href="${esc(n.link)}" target="_blank" rel="noopener">${(n.time || 0) > since ? '<span class="nong-new">ใหม่</span>' : ''}<span class="nong-tag">${esc(NONG_NEWS[n.key] || 'ข่าว')}</span>${esc(n.title)}<span class="m">${esc(n.source || '')}${n.time ? ' · ' + ago(n.time) : ''}</span></a>`).join('')
-      : '<div class="muted" style="padding:12px 0">ยังไม่มีข่าวตอนนี้</div>');
-  $('#nongJump').innerHTML = Object.entries(NONG_NEWS).filter(([k]) => document.getElementById('news-' + k))
-    .map(([k, t]) => `<a href="#news-${k}">ข่าว${t}ทั้งหมด</a>`).join('');
+function nongOpen(tab = 'news', term = null) {
+  const d = nong.d; if (!d && tab === 'news') return;
+  nong.tab = tab;
+  $('#nongTitle').textContent = tab === 'learn' ? 'น้องสรุปความรู้หุ้นมาให้' : 'น้องสรุปข่าวมาให้แล้ว';
+  document.querySelectorAll('[data-ntab]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.ntab === tab)));
+  if (tab === 'learn') renderLearn(term);
+  else {
+    const since = nongSince(), news = nongNews(d).slice(0, 15);
+    const ago = (t) => { if (!t) return ''; const h = (Date.now() - t) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} นาทีก่อน` : h < 24 ? `${Math.round(h)} ชม.ก่อน` : `${Math.round(h / 24)} วันก่อน`; };
+    const say = (d.summary || []).filter((x) => x.dir).slice(0, 4);
+    $('#nongSub').textContent = `${news.filter((n) => (n.time || 0) > since).length || 'ไม่มี'}ข่าวใหม่ตั้งแต่ครั้งก่อน`.replace(/^(\d+)/, '$1 ');
+    $('#nongBody').innerHTML = (say.length ? `<div class="nong-say"><b>สรุปสั้นๆ ก่อนนะ</b><ul>${say.map((x) => `<li>${esc(x.text)}</li>`).join('')}</ul></div>` : '') +
+      (news.length ? news.map((n) => `<a class="nong-item" href="${esc(n.link)}" target="_blank" rel="noopener">${(n.time || 0) > since ? '<span class="nong-new">ใหม่</span>' : ''}<span class="nong-tag">${esc(NONG_NEWS[n.key] || 'ข่าว')}</span>${esc(n.title)}<span class="m">${esc(n.source || '')}${n.time ? ' · ' + ago(n.time) : ''}</span></a>`).join('')
+        : '<div class="muted" style="padding:12px 0">ยังไม่มีข่าวตอนนี้</div>');
+    $('#nongJump').innerHTML = Object.entries(NONG_NEWS).filter(([k]) => document.getElementById('news-' + k))
+      .map(([k, t]) => `<a href="#news-${k}">ข่าว${t}ทั้งหมด</a>`).join('');
+    nongSave({ seen: Date.now() }); nongBadge();
+  }
   $('#nongPanel').hidden = false; $('#nongBtn').setAttribute('aria-expanded', 'true'); document.body.classList.add('nong-open');
   $('#nongBubble').classList.remove('show');
-  nongSave({ seen: Date.now() }); nongBadge();
 }
+// ---------- ความรู้หุ้น: อ่านค่าต่างๆ ยังไง ----------
+// แต่ละข้อ: คืออะไร / สูงแปลว่า / ต่ำแปลว่า / เคล็ดลับหรือข้อควรระวัง
+const LEARN_CATS = { value: 'ราคาถูกหรือแพง', quality: 'บริษัทเก่งแค่ไหน', growth: 'โตแค่ไหน', income: 'ปันผล', tech: 'กราฟและแนวโน้มราคา', trade: 'วางแผนซื้อขาย', site: 'ค่าในเว็บนี้', basic: 'พื้นฐานที่ควรรู้' };
+const GLOSSARY = [
+  // ราคาถูกหรือแพง
+  { id: 'pe', cat: 'value', name: 'P/E', en: 'Price to Earnings', what: 'ราคาหุ้นหารด้วยกำไรต่อหุ้น 1 ปี บอกว่าถ้ากำไรเท่าเดิมทุกปี ต้องใช้กี่ปีกำไรจึงเท่ากับเงินที่จ่ายซื้อ',
+    high: 'ตลาดคาดว่ากำไรจะโตเร็ว หรือราคาแพงเกินกำไรจริง', low: 'ราคาถูกเทียบกำไร หรือตลาดคาดว่ากำไรจะลด', tip: 'เทียบกับบริษัทกลุ่มเดียวกันเสมอ ธนาคารมักต่ำราว 6–10 เท่า เทคโนโลยีมักสูง 25 เท่าขึ้นไป ถ้าบริษัทขาดทุนจะไม่มีค่านี้' },
+  { id: 'fpe', cat: 'value', name: 'Forward P/E', en: 'P/E ล่วงหน้า', what: 'P/E ที่ใช้กำไรที่นักวิเคราะห์คาดไว้ปีหน้าแทนกำไรปีที่ผ่านมา',
+    high: 'แม้คิดจากกำไรที่คาดไว้ ราคาก็ยังแพง', low: 'ถ้ากำไรเป็นไปตามคาด ราคาตอนนี้ถือว่าถูก', tip: 'ถ้า Forward P/E ต่ำกว่า P/E ปกติ แปลว่าตลาดคาดว่ากำไรจะเพิ่ม แต่ตัวเลขคาดการณ์ผิดได้' },
+  { id: 'pb', cat: 'value', name: 'P/B', en: 'Price to Book', what: 'ราคาหุ้นหารด้วยมูลค่าทางบัญชีต่อหุ้น คือส่วนของผู้ถือหุ้นหลังหักหนี้ทั้งหมด',
+    high: 'นักลงทุนยอมจ่ายแพงกว่าทรัพย์สินสุทธิมาก เพราะบริษัททำกำไรจากทุนได้ดี (ROE สูง)', low: 'ต่ำกว่า 1 แปลว่าราคาถูกกว่าทรัพย์สินสุทธิ อาจเป็นของถูก หรือบริษัททำกำไรได้น้อย', tip: 'ใช้ได้ดีกับธนาคาร ประกัน และอสังหาฯ ซึ่งทรัพย์สินส่วนใหญ่เป็นเงินหรือที่ดิน ใช้กับบริษัทเทคโนโลยีไม่ค่อยได้' },
+  { id: 'cap', cat: 'value', name: 'มูลค่าตลาด', en: 'Market Cap', what: 'ราคาหุ้นคูณจำนวนหุ้นทั้งหมด คือราคาของทั้งบริษัทในสายตาตลาด',
+    high: 'บริษัทใหญ่ มักมั่นคงกว่า ราคาขยับช้ากว่า', low: 'บริษัทเล็ก มีโอกาสโตเร็ว แต่ผันผวนและเสี่ยงกว่า', tip: 'หุ้นเล็กมักมีคนซื้อขายน้อย ซื้อง่ายแต่ขายยากตอนตลาดตกใจ' },
+  { id: 'eps', cat: 'value', name: 'EPS', en: 'Earnings per Share', what: 'กำไรสุทธิหารด้วยจำนวนหุ้น คือกำไรที่หุ้น 1 หุ้นได้',
+    high: 'แต่ละหุ้นสร้างกำไรได้มาก (ต้องดูเทียบกับราคาหุ้นด้วย)', low: 'กำไรต่อหุ้นน้อย ถ้าติดลบแปลว่าขาดทุน', tip: 'ดูแนวโน้มหลายปีสำคัญกว่าตัวเลขปีเดียว EPS ที่โตต่อเนื่องเป็นสัญญาณที่ดี' },
+  { id: 'bv', cat: 'value', name: 'มูลค่าทางบัญชี', en: 'Book Value', what: 'ทรัพย์สินทั้งหมดลบหนี้สินทั้งหมด คือส่วนที่เป็นของผู้ถือหุ้นจริงๆ ตามงบ',
+    high: 'บริษัทมีทรัพย์สินสุทธิมาก', low: 'ทรัพย์สินสุทธิน้อย หรือติดลบเมื่อขาดทุนสะสม', tip: 'ทรัพย์สินบางอย่างในงบอาจขายได้ไม่ถึงราคาที่บันทึก เช่น เครื่องจักรเก่า หรือสินค้าค้างสต็อก' },
+  { id: 'fair', cat: 'value', name: 'มูลค่าที่เหมาะสม', en: 'Fair Value', what: 'ราคาที่ประเมินว่าหุ้น "ควรจะเป็น" ในเว็บนี้ใช้ค่ากลางของกำไรต่อหุ้น × P/E กลุ่ม, มูลค่าทางบัญชี × P/B กลุ่ม และเป้านักวิเคราะห์',
+    high: 'ถ้ามูลค่าสูงกว่าราคาตลาด แปลว่าหุ้นอาจถูกเกินไป', low: 'ถ้ามูลค่าต่ำกว่าราคาตลาด แปลว่าหุ้นอาจแพงเกินไป', tip: 'เป็นการประมาณ ไม่ใช่ความจริง ถ้ากำไรปีล่าสุดสูงหรือต่ำผิดปกติ มูลค่าที่ได้จะคลาดเคลื่อน' },
+  { id: 'target', cat: 'value', name: 'เป้าราคานักวิเคราะห์', en: 'Analyst Target', what: 'ราคาที่นักวิเคราะห์ของบริษัทหลักทรัพย์คาดว่าหุ้นควรไปถึงใน 12 เดือน (ค่าเฉลี่ยหลายราย)',
+    high: 'ถ้าสูงกว่าราคาตอนนี้มาก นักวิเคราะห์มองว่ายังขึ้นได้อีก', low: 'ถ้าต่ำกว่าราคาตอนนี้ นักวิเคราะห์มองว่าแพงเกินแล้ว', tip: 'นักวิเคราะห์มักมองบวกเกินจริงและปรับเป้าตามราคา ควรมีอย่างน้อย 5 รายจึงพอเชื่อได้' },
+  // บริษัทเก่งแค่ไหน
+  { id: 'roe', cat: 'quality', name: 'ROE', en: 'Return on Equity', what: 'กำไรสุทธิหารด้วยส่วนของผู้ถือหุ้น บอกว่าเงินทุนของเจ้าของ 100 บาท สร้างกำไรได้กี่บาทต่อปี',
+    high: '15% ขึ้นไปถือว่าดี บริษัทใช้เงินทุนเก่ง', low: 'ต่ำกว่า 5% ทำกำไรได้น้อย ฝากเงินหรือซื้อพันธบัตรอาจได้พอๆ กัน', tip: 'ROE สูงเพราะกู้เงินมาก็ได้ ต้องดูหนี้ (D/E) ประกอบเสมอ' },
+  { id: 'roa', cat: 'quality', name: 'ROA', en: 'Return on Assets', what: 'กำไรสุทธิหารด้วยทรัพย์สินทั้งหมด บอกว่าทรัพย์สิน 100 บาท สร้างกำไรได้กี่บาท',
+    high: 'ใช้ทรัพย์สินได้คุ้ม', low: 'ทรัพย์สินเยอะแต่กำไรน้อย', tip: 'ธนาคารมี ROA ต่ำโดยธรรมชาติ (ราว 1–1.5%) เพราะทรัพย์สินส่วนใหญ่เป็นเงินให้กู้' },
+  { id: 'margin', cat: 'quality', name: 'อัตรากำไรสุทธิ', en: 'Net Profit Margin', what: 'กำไรสุทธิหารด้วยรายได้ ขายของ 100 บาท เหลือเป็นกำไรกี่บาท',
+    high: 'มีอำนาจตั้งราคา หรือคุมต้นทุนได้ดี', low: 'แข่งขันด้านราคาสูง ต้นทุนขึ้นนิดเดียวก็อาจขาดทุน', tip: 'ค้าปลีกมักต่ำราว 2–5% ซอฟต์แวร์มักสูงกว่า 20% ให้เทียบในกลุ่มเดียวกัน' },
+  { id: 'opmargin', cat: 'quality', name: 'อัตรากำไรจากการดำเนินงาน', en: 'Operating Margin', what: 'กำไรจากธุรกิจหลักก่อนดอกเบี้ยและภาษี หารด้วยรายได้',
+    high: 'ธุรกิจหลักแข็งแรง', low: 'ธุรกิจหลักกำไรน้อย', tip: 'ดีกว่าอัตรากำไรสุทธิตรงที่ไม่ปนรายการพิเศษ เช่น กำไรจากขายที่ดินครั้งเดียว' },
+  { id: 'de', cat: 'quality', name: 'หนี้สินต่อทุน', en: 'Debt to Equity (D/E)', what: 'หนี้ที่มีดอกเบี้ยหารด้วยส่วนของผู้ถือหุ้น เว็บนี้แสดงเป็น % (100% = หนี้เท่ากับทุน)',
+    high: 'เกิน 200% ถือว่ากู้มาก ดอกเบี้ยขึ้นหรือรายได้ลดจะกระทบแรง', low: 'ต่ำกว่า 50% การเงินแข็งแรง ทนช่วงเศรษฐกิจแย่ได้', tip: 'ไม่ใช้กับธนาคารเพราะเงินฝากนับเป็นหนี้ ธุรกิจไฟฟ้าและสื่อสารมักกู้สูงเป็นปกติ' },
+  { id: 'current', cat: 'quality', name: 'อัตราส่วนสภาพคล่อง', en: 'Current Ratio', what: 'สินทรัพย์ที่เปลี่ยนเป็นเงินได้ใน 1 ปี หารด้วยหนี้ที่ต้องจ่ายใน 1 ปี',
+    high: 'มากกว่า 1.5 มีเงินพอจ่ายหนี้ระยะสั้นสบาย', low: 'ต่ำกว่า 1 อาจต้องกู้เพิ่มหรือขายทรัพย์สินเพื่อจ่ายหนี้', tip: 'ค้าปลีกอย่างร้านสะดวกซื้อมักต่ำกว่า 1 ได้ เพราะขายเงินสดแต่จ่ายซัพพลายเออร์ทีหลัง' },
+  { id: 'fcf', cat: 'quality', name: 'กระแสเงินสดอิสระ', en: 'Free Cash Flow', what: 'เงินสดที่ได้จากธุรกิจ หักเงินลงทุนในเครื่องจักรและสาขาแล้ว',
+    high: 'มีเงินเหลือจริงไว้จ่ายปันผล ใช้หนี้ หรือขยายธุรกิจ', low: 'ติดลบแปลว่าเงินออกมากกว่าเข้า อาจเพราะกำลังลงทุนหนัก หรือธุรกิจมีปัญหา', tip: 'กำไรในงบตกแต่งได้ง่ายกว่าเงินสด ถ้ามีกำไรแต่เงินสดอิสระติดลบหลายปี ต้องระวัง' },
+  // โตแค่ไหน
+  { id: 'revg', cat: 'growth', name: 'รายได้โต', en: 'Revenue Growth', what: 'รายได้ล่าสุดเพิ่มหรือลดกี่ % จากช่วงเดียวกันของปีก่อน',
+    high: 'ขายได้มากขึ้น ธุรกิจขยายตัว', low: 'ติดลบแปลว่ายอดขายหด ตลาดอาจอิ่มตัวหรือแพ้คู่แข่ง', tip: 'รายได้โตแต่กำไรไม่โต อาจแปลว่าต้องลดราคาสินค้าเพื่อแย่งลูกค้า' },
+  { id: 'epsg', cat: 'growth', name: 'กำไรโต', en: 'Earnings Growth', what: 'กำไรล่าสุดเพิ่มหรือลดกี่ % จากช่วงเดียวกันของปีก่อน',
+    high: 'กำไรเพิ่ม ราคาหุ้นมักตามขึ้นในระยะยาว', low: 'กำไรหด ถ้าหดต่อเนื่องราคามักลงตาม', tip: 'ระวังกำไรที่โตเพราะรายการพิเศษครั้งเดียว ดูหลายไตรมาสประกอบ' },
+  { id: 'cagr', cat: 'growth', name: 'CAGR', en: 'Compound Annual Growth Rate', what: 'อัตราการเติบโตเฉลี่ยต่อปีแบบทบต้น ในช่วงหลายปี',
+    high: 'โตสม่ำเสมอและเร็ว', low: 'แทบไม่โต หรือหดตัวเฉลี่ย', tip: 'ใช้ดูภาพยาว 3–5 ปี ช่วยตัดผลของปีที่ดีหรือแย่ผิดปกติ' },
+  // ปันผล
+  { id: 'dy', cat: 'income', name: 'อัตราปันผล', en: 'Dividend Yield', what: 'ปันผลต่อหุ้นทั้งปีหารด้วยราคาหุ้น ซื้อหุ้น 100 บาท ได้ปันผลกี่บาทต่อปี',
+    high: '4–7% ถือว่าดีสำหรับหุ้นไทย แต่ถ้าเกิน 10% มักเป็นเพราะราคาลงแรงหรือปันผลพิเศษครั้งเดียว', low: 'บริษัทเก็บกำไรไว้ขยายธุรกิจ พบบ่อยในหุ้นเติบโต', tip: 'ปันผลปีหน้าอาจไม่เท่าปีนี้ ดูว่ากำไรยังพอจ่ายหรือไม่' },
+  { id: 'payout', cat: 'income', name: 'อัตราการจ่ายปันผล', en: 'Payout Ratio', what: 'ปันผลหารด้วยกำไร บริษัทแบ่งกำไรกี่ % มาจ่ายผู้ถือหุ้น',
+    high: 'เกิน 100% จ่ายมากกว่าที่หาได้ อาจต้องลดปันผลในอนาคต', low: 'จ่ายน้อย เก็บเงินไว้ลงทุนต่อ', tip: '40–70% เป็นระดับที่พบบ่อยและยั่งยืนสำหรับบริษัทที่โตแล้ว' },
+  { id: 'xd', cat: 'income', name: 'วัน XD', en: 'Ex-Dividend Date', what: 'วันแรกที่ซื้อหุ้นแล้วจะไม่ได้ปันผลรอบนั้น ต้องถือก่อนวัน XD จึงได้ปันผล',
+    high: '', low: '', tip: 'วัน XD ราคาหุ้นมักลดลงเท่าปันผลโดยประมาณ ซื้อก่อน XD เพื่อเอาปันผลจึงไม่ได้กำไรฟรี และปันผลถูกหักภาษี 10%' },
+  // กราฟ
+  { id: 'sma', cat: 'tech', name: 'เส้นค่าเฉลี่ย 20 / 50 / 200 วัน', en: 'Moving Average (SMA)', what: 'ราคาปิดเฉลี่ยย้อนหลัง 20, 50 หรือ 200 วันทำการ ใช้ดูแนวโน้มสั้น กลาง และยาว',
+    high: 'ราคาอยู่เหนือเส้น = แนวโน้มขาขึ้นในช่วงนั้น', low: 'ราคาอยู่ใต้เส้น = แนวโน้มขาลงในช่วงนั้น', tip: 'เส้น 50 วันตัดขึ้นเหนือเส้น 200 วัน (Golden Cross) มักถือเป็นสัญญาณขาขึ้น ตัดลง (Death Cross) เป็นสัญญาณขาลง แต่สัญญาณมักมาช้า' },
+  { id: 'rsi', cat: 'tech', name: 'RSI', en: 'Relative Strength Index', what: 'ตัวเลข 0–100 วัดว่าช่วง 14 วันที่ผ่านมาราคาขึ้นแรงกว่าลงแค่ไหน',
+    high: 'เกิน 70 ขึ้นแรงเกินไป (ร้อนแรง) มีโอกาสพักตัว', low: 'ต่ำกว่า 30 ลงแรงเกินไป (ขายมากไป) มีโอกาสเด้ง', tip: 'ในขาขึ้นแรง RSI อยู่เหนือ 70 ได้นาน ไม่ได้แปลว่าต้องขายทันที' },
+  { id: 'macd', cat: 'tech', name: 'MACD', en: 'Moving Average Convergence Divergence', what: 'ผลต่างของค่าเฉลี่ยราคาระยะสั้นกับระยะยาว ใช้ดูว่าแรงซื้อหรือแรงขายกำลังเร่งขึ้นหรือแผ่วลง',
+    high: 'เป็นบวก = แรงขึ้นกำลังเร่ง', low: 'เป็นลบ = แรงลงกำลังเร่ง', tip: 'ตอนราคาลงแล้ว MACD กลับมาเป็นบวก มักเป็นสัญญาณแรกว่าแรงขายเริ่มหมด' },
+  { id: 'support', cat: 'tech', name: 'แนวรับ / แนวต้าน', en: 'Support / Resistance', what: 'แนวรับคือระดับราคาที่ในอดีตมักมีคนเข้ามาซื้อจนราคาหยุดลง แนวต้านคือระดับที่มักมีคนขายจนราคาหยุดขึ้น',
+    high: 'ยิ่งราคาเคยกลับตัวที่ระดับนั้นหลายครั้ง ระดับนั้นยิ่งสำคัญ', low: 'ถ้าราคาหลุดแนวรับลงไป แนวรับเดิมมักกลายเป็นแนวต้านใหม่', tip: 'เป็นโซนราคา ไม่ใช่ราคาเป๊ะ ควรเผื่อ 1–2%' },
+  { id: 'dd', cat: 'tech', name: 'จากจุดสูงสุดรอบปี', en: 'Drawdown from 52-week High', what: 'ราคาตอนนี้ต่ำกว่าราคาสูงสุดใน 52 สัปดาห์กี่ %',
+    high: 'ลงลึกเกิน 30–40% ราคาอาจถูกจริง หรือบริษัทมีปัญหาที่ตลาดรู้แล้ว', low: 'ใกล้ 0% ราคาอยู่ใกล้จุดสูงสุด แนวโน้มแข็งแรง', tip: 'หุ้นที่ลงแรงไม่จำเป็นต้องเด้ง ดูสาเหตุและสัญญาณฟื้นประกอบ' },
+  { id: 'vol', cat: 'tech', name: 'ความผันผวน', en: 'Volatility', what: 'ราคาแกว่งขึ้นลงแรงแค่ไหน คิดเป็น % ต่อปี',
+    high: 'เกิน 40% ราคาแกว่งแรง กำไรหรือขาดทุนเร็ว', low: 'ต่ำกว่า 20% ราคานิ่ง เหมาะกับคนรับความเสี่ยงได้น้อย', tip: 'เว็บนี้ใช้ค่านี้คำนวณกรอบราคา 1 เดือนข้างหน้าในส่วน "ถ้าลง"' },
+  { id: 'atr', cat: 'tech', name: 'ATR', en: 'Average True Range', what: 'ราคาแกว่งเฉลี่ยวันละกี่บาท ใน 14 วันที่ผ่านมา',
+    high: 'แกว่งวันละมาก ควรตั้งจุดตัดขาดทุนห่างขึ้น', low: 'แกว่งน้อย ตั้งจุดตัดขาดทุนใกล้ได้', tip: 'เว็บนี้ใช้ ATR ช่วยกำหนดจุดตัดขาดทุน เพื่อไม่ให้โดนตัดเพราะราคาแกว่งปกติ' },
+  { id: 'volume', cat: 'tech', name: 'ปริมาณซื้อขาย', en: 'Volume', what: 'จำนวนหุ้นที่ซื้อขายกันในแต่ละวัน เว็บนี้เทียบค่าเฉลี่ย 20 วันกับ 60 วัน',
+    high: 'ราคาขึ้นพร้อมปริมาณสูง = มีแรงซื้อจริง ราคาลงพร้อมปริมาณสูง = มีคนเทขายจริง', low: 'ราคาขยับแต่ปริมาณน้อย สัญญาณไม่ค่อยน่าเชื่อ', tip: 'ปริมาณซื้อขายน้อยมาก (ไม่ถึงไม่กี่ล้านบาทต่อวัน) ขายออกยากตอนต้องการ' },
+  { id: 'beta', cat: 'tech', name: 'Beta', en: 'Beta', what: 'หุ้นขยับแรงแค่ไหนเมื่อเทียบกับตลาดรวม',
+    high: 'มากกว่า 1 ตลาดขึ้น 1% หุ้นมักขึ้นมากกว่า 1% และตอนลงก็ลงแรงกว่า', low: 'น้อยกว่า 1 ขยับช้ากว่าตลาด เป็นหุ้นปลอดภัยกว่า', tip: 'หุ้นไฟฟ้าและสินค้าจำเป็นมักมี Beta ต่ำ หุ้นเทคโนโลยีมักสูง' },
+  { id: 'rel', cat: 'tech', name: 'เทียบดัชนีตลาด', en: 'Relative Strength', what: 'ผลตอบแทน 3 เดือนของหุ้น ลบด้วยผลตอบแทนของดัชนี SET (หุ้นไทย) หรือ S&P 500 (หุ้นต่างประเทศ)',
+    high: 'บวก แปลว่าหุ้นแข็งแรงกว่าตลาด', low: 'ลบ แปลว่าหุ้นอ่อนแอกว่าตลาด', tip: 'ตอนตลาดลง หุ้นที่ลงน้อยกว่าตลาดก็ถือว่าแข็งแรง' },
+  // วางแผนซื้อขาย
+  { id: 'stop', cat: 'trade', name: 'จุดตัดขาดทุน', en: 'Stop Loss', what: 'ราคาที่ตั้งไว้ล่วงหน้าว่าถ้าลงถึงตรงนี้จะขายทันที เพื่อจำกัดการขาดทุน',
+    high: '', low: '', tip: 'ตั้งก่อนซื้อและทำตามจริง เป็นสิ่งที่แยกการเก็งกำไรที่มีวินัยออกจากการลุ้นโชค' },
+  { id: 'rr', cat: 'trade', name: 'กำไรต่อความเสี่ยง', en: 'Risk / Reward', what: 'ระยะจากจุดซื้อถึงเป้าขาย หารด้วยระยะจากจุดซื้อถึงจุดตัดขาดทุน',
+    high: '2 เท่าขึ้นไป ถ้าถูกครั้งเดียวก็ชดเชยที่ผิด 2 ครั้งได้', low: 'ต่ำกว่า 1.5 เท่า ไม่คุ้ม ต้องถูกบ่อยมากจึงจะได้กำไร', tip: 'เว็บนี้บอกว่า "ยังไม่คุ้ม" เมื่อต่ำกว่า 1.5 เท่า' },
+  { id: 'mos', cat: 'trade', name: 'ส่วนเผื่อความปลอดภัย', en: 'Margin of Safety', what: 'ซื้อต่ำกว่ามูลค่าที่ประเมินไว้ส่วนหนึ่ง เผื่อการประเมินผิด',
+    high: 'เผื่อมาก ปลอดภัยกว่า แต่อาจไม่ได้ซื้อเลย', low: 'เผื่อน้อย ได้ซื้อง่าย แต่ถ้าประเมินผิดจะขาดทุน', tip: 'เว็บนี้ตั้งโซนซื้อระยะยาวไว้ต่ำกว่ามูลค่าประเมิน 10–20%' },
+  { id: 'dca', cat: 'trade', name: 'ทยอยซื้อ', en: 'DCA / Scale-in', what: 'แบ่งเงินซื้อหลายครั้ง แทนการซื้อทีเดียว',
+    high: '', low: '', tip: 'ลดความเสี่ยงจากการซื้อผิดจังหวะ เหมาะกับการลงทุนระยะยาวและคนที่จับจังหวะตลาดไม่ได้' },
+  { id: 'div', cat: 'trade', name: 'กระจายความเสี่ยง', en: 'Diversification', what: 'ลงทุนหลายหุ้น หลายกลุ่มธุรกิจ หรือหลายประเภทสินทรัพย์ ไม่ใส่เงินทั้งหมดในที่เดียว',
+    high: '', low: '', tip: 'หุ้นตัวเดียวไม่ควรเกิน 10–20% ของพอร์ต และหุ้นในกลุ่มเดียวกันมักขึ้นลงพร้อมกัน' },
+  { id: 'fee', cat: 'trade', name: 'ค่าธรรมเนียมและภาษี', en: 'Fees & Tax', what: 'หุ้นไทยเสียค่าคอมมิชชันราว 0.1–0.25% ทั้งตอนซื้อและขาย ปันผลถูกหักภาษี 10%',
+    high: '', low: '', tip: 'ซื้อขายบ่อย ค่าธรรมเนียมจะกินกำไรมาก ผลทดสอบย้อนหลังในเว็บนี้ยังไม่ได้หักค่าธรรมเนียม' },
+  // ค่าในเว็บนี้
+  { id: 'sscore', cat: 'site', name: 'คะแนนระยะสั้น', en: '1–3 เดือน', what: 'คะแนน 0–100 จากแนวโน้มราคา (40) โมเมนตัม (25) ความแข็งแรงเทียบตลาด (20) และปริมาณซื้อขาย (15)',
+    high: '65 ขึ้นไป แนวโน้มและแรงซื้อดี', low: 'ต่ำกว่า 45 แนวโน้มอ่อน', tip: 'ผลทดสอบย้อนหลังพบว่าคะแนนนี้ทำนายเดือนหน้าได้ไม่ดีกว่าการสุ่ม ใช้บอกสภาพตอนนี้ได้ แต่อย่าใช้เป็นเหตุผลหลักในการซื้อ' },
+  { id: 'lscore', cat: 'site', name: 'คะแนนระยะยาว', en: '1 ปีขึ้นไป', what: 'คะแนน 0–100 จากราคาถูกแพงเทียบกลุ่ม (30) คุณภาพ เช่น ROE กำไร หนี้ (30) การเติบโต (25) และปันผล (15)',
+    high: '65 ขึ้นไป พื้นฐานดีและราคาสมเหตุสมผล', low: 'ต่ำกว่า 45 พื้นฐานหรือราคายังไม่จูงใจ', tip: 'ทดสอบย้อนหลังไม่ได้ เพราะไม่มีงบการเงินในอดีตทุกช่วง ใช้ประกอบการตัดสินใจเท่านั้น' },
+  { id: 'verdict', cat: 'site', name: 'ป้ายผลวิเคราะห์', en: '', what: '"น่าสนใจ" = คะแนนด้านนั้น 65 ขึ้นไป · "รอดูก่อน" = ยังไม่ชัด · "ควรระวัง" = มีสัญญาณเสี่ยงร้ายแรง เช่น ขาดทุน ราคาร่วงเกิน 40% หรือคะแนนต่ำทั้งสองด้าน',
+    high: '', low: '', tip: 'หุ้นที่ติด "ควรระวัง" ไม่ได้แปลว่าห้ามซื้อ แต่ต้องรู้ว่ากำลังรับความเสี่ยงอะไร' },
+  { id: 'backtest', cat: 'site', name: 'ทดสอบย้อนหลัง', en: 'Backtest', what: 'ลองใช้สูตรเดียวกันกับข้อมูลในอดีต แล้วดูว่าถ้าทำตามจะได้ผลอย่างไร',
+    high: 'ผลดีในอดีตเพิ่มความมั่นใจได้บ้าง', low: 'ผลไม่ดีกว่าการสุ่ม แปลว่าสูตรนั้นยังใช้ทำนายไม่ได้', tip: 'อดีตไม่ได้รับประกันอนาคต ตลาดเปลี่ยนพฤติกรรมได้' },
+  // พื้นฐาน
+  { id: 'set', cat: 'basic', name: 'SET / SET50 / SET100', en: '', what: 'SET คือดัชนีของหุ้นทุกตัวในตลาดหลักทรัพย์ฯ SET50 และ SET100 คือดัชนีของหุ้นใหญ่ 50 และ 100 ตัวที่ซื้อขายคล่อง',
+    high: '', low: '', tip: 'ใช้ดูภาพรวมตลาด ถ้าดัชนีลงหนัก หุ้นดีก็มักลงตาม' },
+  { id: 'nvdr', cat: 'basic', name: 'NVDR และ DR', en: '', what: 'NVDR (ชื่อลงท้าย -R) คือหุ้นไทยที่ได้ผลตอบแทนเหมือนหุ้นจริงแต่ไม่มีสิทธิ์โหวต มักใช้โดยนักลงทุนต่างชาติ DR (ชื่อลงท้ายด้วยตัวเลข เช่น 80) คือตราสารที่อ้างอิงหุ้นต่างประเทศ ซื้อขายเป็นเงินบาท',
+    high: '', low: '', tip: 'ดูยอดซื้อขาย NVDR ช่วยบอกได้ว่าต่างชาติกำลังซื้อหรือขาย ส่วน DR ช่วยให้ลงทุนหุ้นต่างประเทศได้ผ่านบัญชีหุ้นไทย' },
+  { id: 'earnings', cat: 'basic', name: 'วันประกาศงบ', en: 'Earnings Date', what: 'วันที่บริษัทประกาศผลกำไรรายไตรมาส บริษัทไทยต้องประกาศภายใน 45 วันหลังจบไตรมาส (ไตรมาส 4 ภายใน 60 วัน)',
+    high: '', low: '', tip: 'ราคามักแกว่งแรงช่วงประกาศงบ ถ้ากำไรต่างจากที่ตลาดคาดมาก ราคาอาจกระโดดได้ทั้งขึ้นและลง' },
+];
+
+function learnItem(x, open) {
+  const row = (label, cls, v) => v ? `<div class="lr"><span class="ll ${cls}">${label}</span><span>${esc(v)}</span></div>` : '';
+  return `<details class="learn" id="learn-${x.id}"${open ? ' open' : ''}><summary><b>${esc(x.name)}</b>${x.en ? ` <span class="muted">${esc(x.en)}</span>` : ''}</summary>
+    <div class="lw">${esc(x.what)}</div>${row('สูง', 'hi', x.high)}${row('ต่ำ', 'lo', x.low)}${row('💡', 'tp', x.tip)}</details>`;
+}
+function renderLearn(term = null, q = '') {
+  $('#nongSub').textContent = `อ่านค่าต่างๆ ในหุ้น ${GLOSSARY.length} เรื่อง`;
+  const ql = q.trim().toLowerCase();
+  const hit = (x) => !ql || [x.name, x.en, x.what, x.high, x.low, x.tip].join(' ').toLowerCase().includes(ql);
+  const groups = Object.entries(LEARN_CATS).map(([c, name]) => [name, GLOSSARY.filter((x) => x.cat === c && hit(x))]).filter(([, a]) => a.length);
+  $('#nongBody').innerHTML = `<input class="learn-q" id="learnQ" type="search" placeholder="ค้นหา เช่น P/E, ปันผล, RSI" value="${esc(q)}" aria-label="ค้นหาความรู้หุ้น">
+    <div class="muted" style="font-size:12px;margin:6px 0 4px">กดแต่ละหัวข้อเพื่ออ่าน "สูง" กับ "ต่ำ" แปลว่าอะไร · ในการ์ดหุ้น กดชื่อค่าที่มีเส้นประเพื่อเปิดคำอธิบายได้เลย</div>
+    ${groups.map(([name, a]) => `<h4 class="learn-h">${esc(name)}</h4>${a.map((x) => learnItem(x, x.id === term || (ql && a.length <= 3))).join('')}`).join('') || '<div class="muted" style="padding:12px 0">ไม่พบหัวข้อนี้</div>'}`;
+  $('#nongJump').innerHTML = '<span class="muted" style="font-size:12px">เป็นความรู้ทั่วไป ไม่ใช่คำแนะนำการลงทุน</span>';
+  if (term) requestAnimationFrame(() => document.getElementById('learn-' + term)?.scrollIntoView({ block: 'start' }));
+}
+document.addEventListener('input', (e) => { if (e.target.id === 'learnQ') { const v = e.target.value, pos = e.target.selectionStart; renderLearn(null, v); const i = $('#learnQ'); i.focus(); i.setSelectionRange(pos, pos); } });
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-ntab]'); if (t) { nongOpen(t.dataset.ntab); return; }
+  const k = e.target.closest('[data-learn]'); if (k) { e.preventDefault(); e.stopPropagation(); nongOpen('learn', k.dataset.learn); }
+}, true);
 function nongClose() { $('#nongPanel').hidden = true; $('#nongBtn').setAttribute('aria-expanded', 'false'); document.body.classList.remove('nong-open'); }
 function nongShow(on) {
   $('#nong').hidden = !on; $('#nongBack').hidden = on; if (!on) nongClose();
@@ -1437,7 +1584,7 @@ document.addEventListener('click', (e) => {
   b.classList.add('pop'); setTimeout(() => b.classList.remove('pop'), 150);
 });
 
-// ทางลัด "เติมน้องสวี": เลื่อนลงไปที่รูปน้อง ให้รูปอยู่กลางจอ แล้วเรืองแสงชมพูทักทาย
+// ทางลัด "เติม cici": เลื่อนลงไปที่รูปน้อง ให้รูปอยู่กลางจอ แล้วเรืองแสงชมพูทักทาย
 document.addEventListener('click', (e) => {
   const a = e.target.closest('a[href="#cheer"]'); if (!a) return;
   e.preventDefault();
@@ -1508,7 +1655,8 @@ function renderWatch() {
       <div class="w-chips">${syms.map((s) => `<span class="w-chip"><a href="#w-${esc(s)}">${esc(symShort(s))}</a><button data-rm="${esc(s)}" aria-label="เลิกจับตา ${esc(symShort(s))}">×</button></span>`).join('') || '<span class="muted">ยังไม่มีหุ้นที่จับตา</span>'}</div>
       <div class="explain">ระบบให้คะแนน 2 แบบ: <b>ระยะสั้น</b> (1–3 เดือน) ดูจากแนวโน้มราคา แรงซื้อขาย และความแข็งแกร่งเทียบตลาด
         <b>ระยะยาว</b> (1 ปีขึ้นไป) ดูจากราคาถูกหรือแพงเทียบกลุ่มเดียวกัน ความสามารถทำกำไร หนี้ การเติบโต และปันผล
-        เป็นการคัดกรองด้วยสูตรที่เปิดเผยได้ ไม่ใช่คำแนะนำการลงทุน ราคาจาก Yahoo Finance ดีเลย์ราว 15–20 นาที</div>
+        เป็นการคัดกรองด้วยสูตรที่เปิดเผยได้ ไม่ใช่คำแนะนำการลงทุน ราคาจาก Yahoo Finance ดีเลย์ราว 15–20 นาที
+        <a href="#" data-learn="pe">📚 อ่านวิธีดู P/E, P/B, ROE และค่าอื่นๆ</a></div>
       ${btNote()}
     </section>
     ${syms.map((s) => `<section class="card span-6" id="w-${esc(s)}"><div class="muted">กำลังโหลด ${esc(symShort(s))}…</div></section>`).join('')}
@@ -1547,11 +1695,12 @@ async function renderStockCard(sym) {
   const sLbl = { good: 'แนวโน้มและแรงซื้อดี', mid: 'กลางๆ ยังไม่ชัด', weak: 'แนวโน้มอ่อน ยังไม่น่าเข้า' }[a.shortLabel];
   const lLbl = { good: 'พื้นฐานดี ราคาสมเหตุสมผล', mid: 'พื้นฐานพอใช้', weak: 'พื้นฐานหรือราคายังไม่จูงใจ', na: 'ไม่มีข้อมูลงบเพียงพอ' }[a.longLabel];
   const peerTxt = d.peer?.pe && p.pe ? `<div class="muted">กลุ่ม ${fmt(d.peer.pe, 1)}</div>` : '';
+  const lk = (label, id) => `<a href="#" class="lk" data-learn="${id}">${label}</a>`;
   const kv = [
-    ['1 เดือน', pctS(t.ret1m)], ['1 ปี', pctS(t.ret1y)], ['จากจุดสูงสุดรอบปี', pctS(t.dd)], ['RSI (14 วัน)', t.rsi == null ? '–' : fmt(t.rsi, 0) + (t.rsi > 70 ? ' ร้อนแรง' : t.rsi < 30 ? ' ขายมากไป' : '')],
-    ['P/E', (p.pe ? fmt(p.pe, 1) + ' เท่า' : '–') + peerTxt], ['P/B', p.pb ? fmt(p.pb, 2) + ' เท่า' : '–'], ['ROE', p.roe != null ? fmt(p.roe * 100, 1) + '%' : '–'], ['ปันผล', p.dy ? fmt(p.dy * 100, 2) + '%' : '–'],
-    ['หนี้สิน/ทุน', p.de != null ? fmt(p.de, 0) + '%' : '–'], ['รายได้โต', pctS(p.revGrowth)], ['กำไรโต', pctS(p.epsGrowth)],
-    ['เป้านักวิเคราะห์', p.target && p.analysts ? `${money(p.target, cur)} <span class="muted">(${p.analysts} ราย)</span>` : '–'],
+    ['1 เดือน', pctS(t.ret1m)], ['1 ปี', pctS(t.ret1y)], [lk('จากจุดสูงสุดรอบปี', 'dd'), pctS(t.dd)], [lk('RSI (14 วัน)', 'rsi'), t.rsi == null ? '–' : fmt(t.rsi, 0) + (t.rsi > 70 ? ' ร้อนแรง' : t.rsi < 30 ? ' ขายมากไป' : '')],
+    [lk('P/E', 'pe'), (p.pe ? fmt(p.pe, 1) + ' เท่า' : '–') + peerTxt], [lk('P/B', 'pb'), p.pb ? fmt(p.pb, 2) + ' เท่า' : '–'], [lk('ROE', 'roe'), p.roe != null ? fmt(p.roe * 100, 1) + '%' : '–'], [lk('ปันผล', 'dy'), p.dy ? fmt(p.dy * 100, 2) + '%' : '–'],
+    [lk('หนี้สิน/ทุน', 'de'), p.de != null ? fmt(p.de, 0) + '%' : '–'], [lk('รายได้โต', 'revg'), pctS(p.revGrowth)], [lk('กำไรโต', 'epsg'), pctS(p.epsGrowth)],
+    [lk('เป้านักวิเคราะห์', 'target'), p.target && p.analysts ? `${money(p.target, cur)} <span class="muted">(${p.analysts} ราย)</span>` : '–'],
   ];
   const lv = a.levels, ld = (x) => `${money(x.price, cur)} <span class="muted">(${x.pct >= 0 ? '+' : '−'}${fmt(Math.abs(x.pct * 100), 1)}% · ${esc(x.kind)})</span>`;
   const f = a.fall;
@@ -1584,7 +1733,7 @@ async function renderStockCard(sym) {
       <div class="muted" style="font-size:12px">${esc(SECTOR_TH[p.sector] || p.sector || '')}${p.industry ? ' · ' + esc(p.industry) : ''}${p.cap ? ' · มูลค่าตลาด ' + bigNum(p.cap) + (cur === 'USD' ? ' $' : ' บาท') : ''}</div></div>
       <div class="px"><b>${money(d.price, cur)}</b><div>${pctS(d.chg, 2)} วันนี้</div></div><button class="w-x" data-rm="${esc(d.s)}" aria-label="เลิกจับตา ${esc(symShort(d.s))}">×</button></div>
     <div class="verdict ${vc}">${vt}</div>
-    <div class="meters">${meter('ระยะสั้น (1–3 เดือน)', a.short.score, sLbl)}${meter('ระยะยาว (1 ปีขึ้นไป)', a.long?.score ?? null, lLbl)}</div>
+    <div class="meters">${meter(lk('ระยะสั้น (1–3 เดือน)', 'sscore'), a.short.score, sLbl)}${meter(lk('ระยะยาว (1 ปีขึ้นไป)', 'lscore'), a.long?.score ?? null, lLbl)}</div>
     ${compactLine(d, a, cur)}
     <button class="tab w-more" type="button" data-wopen="${esc(d.s)}" aria-expanded="${W.open.has(d.s)}">${W.open.has(d.s) ? 'ย่อ ▴' : 'ดูรายละเอียด ▾'}</button>
     <div class="w-detail">
